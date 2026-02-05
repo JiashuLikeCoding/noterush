@@ -395,18 +395,22 @@ struct LanguagePickerSheet: View {
 struct ThemePicker: View {
     @Binding var selectedRaw: String
 
+    private let columns: [GridItem] = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                ForEach(AppTheme.allCases) { theme in
-                    Button(action: { selectedRaw = theme.rawValue }) {
-                        ThemeSwatch(theme: theme, isSelected: selectedRaw == theme.rawValue)
-                    }
-                    .buttonStyle(.plain)
+        LazyVGrid(columns: columns, spacing: 12) {
+            ForEach(AppTheme.allCases) { theme in
+                Button(action: { selectedRaw = theme.rawValue }) {
+                    ThemeSwatch(theme: theme, isSelected: selectedRaw == theme.rawValue)
+                        .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.vertical, 2)
         }
+        .padding(.vertical, 2)
     }
 }
 
@@ -443,7 +447,8 @@ struct ThemeSwatch: View {
                 }
                 .padding(8)
             }
-            .frame(width: 96, height: 60)
+            .frame(maxWidth: .infinity)
+            .frame(height: 60)
 
             Text(theme.displayName)
                 .font(.custom("AvenirNext-DemiBold", size: 11))
