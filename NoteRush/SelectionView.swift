@@ -237,21 +237,21 @@ struct ZenClefPicker: View {
             ForEach(StaffClefMode.allCases) { mode in
                 Button(action: { selection = mode }) {
                     Text(mode.titleKey)
-                        .font(.custom("AvenirNext-DemiBold", size: 10))
+                        .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.body))
                         .foregroundColor(selection == mode ? .white : CuteTheme.textPrimary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
                         .background(selection == mode ? CuteTheme.accent : CuteTheme.controlFill)
-                        .cornerRadius(8)
+                        .cornerRadius(10)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(4)
+        .padding(6)
         .background(CuteTheme.cardBackground)
-        .cornerRadius(10)
+        .cornerRadius(12)
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: 12)
                 .stroke(CuteTheme.controlBorder, lineWidth: 1)
         )
     }
@@ -599,6 +599,7 @@ struct PracticeNotesCard: View {
                     }
                 )
                 ZenClefPicker(selection: clefBinding)
+                    .frame(maxWidth: .infinity)
             }
 
             ZenDivider()
