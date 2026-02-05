@@ -27,9 +27,9 @@ struct SelectionView: View {
     @Binding var selectedLevel: PracticeLevel?
     @Binding var selectedSong: SongTemplate?
     @Binding var songClefModes: [UUID: StaffClefMode]
+    @Binding var activeTab: SelectionTab
     let onStartPractice: () -> Void
     let onStartSong: (SongTemplate, Set<NoteLetter>, StaffClefMode) -> Void
-    @State private var activeTab: SelectionTab = .practiceNotes
     @State private var showingSettings: Bool = false
 
     @AppStorage(AppSettingsKeys.soundEffectsEnabled) private var soundEnabled: Bool = true

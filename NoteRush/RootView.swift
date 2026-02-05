@@ -19,6 +19,7 @@ struct RootView: View {
     @State private var selectedLevel: PracticeLevel? = PracticeLevel.library.first
     @State private var selectedSong: SongTemplate?
     @State private var songClefModes: [UUID: StaffClefMode] = [:]
+    @State private var selectionTab: SelectionTab = .practiceNotes
     @State private var activeSong: Song?
     @State private var activeClefMode: StaffClefMode?
     @State private var activeSongTemplate: SongTemplate?
@@ -88,6 +89,7 @@ struct RootView: View {
                 selectedLevel: $selectedLevel,
                 selectedSong: $selectedSong,
                 songClefModes: $songClefModes,
+                activeTab: $selectionTab,
                 onStartPractice: {
                     let level = selectedLevel
                     let levelClefMode: StaffClefMode
@@ -130,6 +132,7 @@ struct RootView: View {
                     activeSongTemplate = nil
                     activeSongTargetLetters = selectedLetters
                     isFreePractice = selectedLevel == nil
+                    selectionTab = isFreePractice ? .practiceNotes : .levels
                     step = .play
                 },
                 onStartSong: { song, targetLetters, clefMode in
@@ -145,6 +148,7 @@ struct RootView: View {
                     activeSongTargetLetters = targetLetters
                     songClefModes[song.id] = songClefMode
                     isFreePractice = false
+                    selectionTab = .songs
                     step = .play
                 }
             )
@@ -189,6 +193,8 @@ struct RootView: View {
                     clefMode: activeClefMode,
                     onChangeClef: onChangeClef,
                     onExit: {
+                        // Return to the page that started this session.
+                        selectionTab = isFreePractice ? (selectedLevel == nil ? .practiceNotes : .levels) : .songs
                         step = .selection
                     }
                 )
@@ -312,6 +318,22 @@ struct PrimaryButtonStyle: ButtonStyle {
                     .stroke(CuteTheme.accent.opacity(0.2), lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(0.12), radius: configuration.isPressed ? 2 : 6, x: 0, y: 4)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+    }
+}
+
+struct SecondaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: CuteTheme.FontSize.button, weight: .bold, design: .rounded))
+            .foregroundColor(CuteTheme.textPrimary)
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .background(configuration.isPressed ? CuteTheme.controlFillPressed : CuteTheme.controlFill)
+            .cornerRadius(14)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(CuteTheme.controlBorder, lineWidth: 1)
+            )
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
     }
 }
