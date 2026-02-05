@@ -263,26 +263,28 @@ struct ZenLevelTabBar: View {
     let onSelect: (Int) -> Void
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 18) {
-                ForEach(levels, id: \.self) { level in
-                    Button(action: { onSelect(level) }) {
-                        VStack(spacing: 8) {
-                            Text("L\(level)")
-                                .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.section))
-                                .foregroundColor(selectedLevel == level ? CuteTheme.textPrimary : CuteTheme.textSecondary)
-                            Rectangle()
-                                .fill(selectedLevel == level ? CuteTheme.accent : Color.clear)
-                                .frame(height: 3)
-                                .cornerRadius(1.5)
-                        }
-                        .padding(.vertical, 4)
+        HStack(spacing: 0) {
+            ForEach(levels, id: \.self) { level in
+                Button(action: { onSelect(level) }) {
+                    VStack(spacing: 8) {
+                        Text("L\(level)")
+                            .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.section))
+                            .foregroundColor(selectedLevel == level ? CuteTheme.textPrimary : CuteTheme.textSecondary)
+                            .frame(maxWidth: .infinity)
+
+                        Rectangle()
+                            .fill(selectedLevel == level ? CuteTheme.accent : Color.clear)
+                            .frame(height: 3)
+                            .cornerRadius(1.5)
                     }
-                    .buttonStyle(.plain)
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 2)
         }
+        .padding(.horizontal, 2)
     }
 }
 
