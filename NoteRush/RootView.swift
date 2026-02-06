@@ -9,7 +9,6 @@ struct RootView: View {
 
     @AppStorage(AppSettingsKeys.appLanguage) private var appLanguageRaw: String = AppLanguage.system.rawValue
     @AppStorage(AppSettingsKeys.appTheme) private var appThemeRaw: String = AppTheme.zen.rawValue
-    @AppStorage(AppSettingsKeys.appearanceMode) private var appearanceModeRaw: String = AppearanceMode.system.rawValue
     @AppStorage(AppSettingsKeys.staffClefMode) private var staffClefModeRaw: String = StaffClefMode.treble.rawValue
     @AppStorage(AppSettingsKeys.freePracticeClefMode) private var freePracticeClefModeRaw: String = StaffClefMode.treble.rawValue
     @State private var step: Step = .entry
@@ -28,11 +27,7 @@ struct RootView: View {
     @State private var isFreePractice: Bool = false
 
     var body: some View {
-        let appearanceMode = AppearanceMode(rawValue: appearanceModeRaw) ?? .system
-        let resolvedColorScheme = appearanceMode.colorScheme
-
         return content
-            .preferredColorScheme(resolvedColorScheme)
             .environment(\.locale, appLanguage.locale)
             .onAppear {
                 // Jason request: default everything to treble clef.
