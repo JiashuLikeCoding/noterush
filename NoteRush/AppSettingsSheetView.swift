@@ -34,6 +34,8 @@ struct AppSettingsSheetView: View {
                 )
                 .padding(16)
             }
+            // Refresh the sheet immediately when theme changes, without dismissing it.
+            .id(appThemeRaw)
             .background(CuteTheme.backgroundTop.opacity(0.12))
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)

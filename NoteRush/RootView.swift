@@ -28,8 +28,6 @@ struct RootView: View {
 
     var body: some View {
         content
-            // Force a full view refresh when theme changes so colors update immediately.
-            .id(appThemeRaw)
             .environment(\.locale, appLanguage.locale)
             .onAppear {
                 // Jason request: default everything to treble clef.
