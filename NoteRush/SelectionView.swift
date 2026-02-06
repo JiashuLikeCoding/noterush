@@ -938,33 +938,7 @@ struct SongCardView: View {
                     .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.body))
                     .foregroundColor(CuteTheme.textPrimary)
 
-                HStack(spacing: 8) {
-                    ZenMetaTag {
-                        Text("Tag.BPM \(Int(template.bpm))")
-                    }
-                    ZenMetaTag {
-                        Text("Tag.DurationSeconds \(Int(template.duration))")
-                    }
-
-                    if template.isFixedMelody {
-                        // Rhythm <value> / Mixed
-                        let rhythmKey = template.melody?.first?.rhythm.displayNameKey ?? "Tag.Mixed"
-                        ZenMetaTag {
-                            if template.isMixedRhythm {
-                                Text("Tag.Rhythm") + Text(" ") + Text(rhythmKey) + Text(" / ") + Text("Tag.Mixed")
-                            } else {
-                                Text("Tag.Rhythm") + Text(" ") + Text(rhythmKey)
-                            }
-                        }
-                    } else {
-                        let intervalText: String = template.noteIntervalBeats == floor(template.noteIntervalBeats)
-                            ? "\(Int(template.noteIntervalBeats))"
-                            : String(format: "%.1f", template.noteIntervalBeats)
-                        ZenMetaTag {
-                            Text("Tag.EveryBeats \(intervalText)")
-                        }
-                    }
-                }
+                // Removed: BPM/Duration/Rhythm tags under song cards (per Jason request)
             }
 
             ZenDivider()
