@@ -6,15 +6,27 @@
 //
 
 import UIKit
+import SwiftUI
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
-
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // If the project was created from a UIKit template, iOS will show the storyboard by default.
+        // We want the SwiftUI app entry (RootView) instead.
+        if window == nil {
+            let hostingController = UIHostingController(rootView: RootView())
+            if let windowScene = application.connectedScenes.first as? UIWindowScene {
+                window = UIWindow(windowScene: windowScene)
+            } else {
+                window = UIWindow(frame: UIScreen.main.bounds)
+            }
+            window?.rootViewController = hostingController
+            window?.makeKeyAndVisible()
+        }
+
         return true
     }
 
