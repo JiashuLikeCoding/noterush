@@ -419,13 +419,8 @@ struct LanguagePickerSheet: View {
 struct ThemePicker: View {
     @Binding var selectedRaw: String
 
-    private let columns: [GridItem] = [
-        GridItem(.flexible(), spacing: 10),
-        GridItem(.flexible(), spacing: 10)
-    ]
-
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 10) {
+        HStack(spacing: 10) {
             ForEach(AppTheme.allCases) { theme in
                 Button(action: { selectedRaw = theme.rawValue }) {
                     ThemeSwatch(theme: theme, isSelected: selectedRaw == theme.rawValue)
@@ -449,10 +444,10 @@ struct ThemeSwatch: View {
         VStack(spacing: 6) {
             Circle()
                 .fill(palette.accent)
-                .frame(width: 28, height: 28)
+                .frame(width: 24, height: 24)
                 .overlay(
                     Circle()
-                        .stroke(isSelected ? palette.accent : CuteTheme.cardBorder, lineWidth: isSelected ? 3 : 1)
+                        .stroke(isSelected ? palette.accent : CuteTheme.controlBorder, lineWidth: isSelected ? 3 : 1)
                 )
 
             Text(theme.displayName)
@@ -461,11 +456,15 @@ struct ThemeSwatch: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(CuteTheme.controlFill.opacity(isSelected ? 0.25 : 0.0))
+                .fill(isSelected ? palette.accent.opacity(0.18) : CuteTheme.controlFill)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isSelected ? palette.accent.opacity(0.45) : CuteTheme.controlBorder, lineWidth: 1)
         )
     }
 }
@@ -519,12 +518,19 @@ struct AppSettingsCard: View {
                     set: { inputModeRaw = $0.rawValue }
                 )
 
-                Picker("Input", selection: modeBinding) {
+                HStack(spacing: 8) {
                     ForEach(InputMode.allCases) { mode in
-                        Text(mode.titleKey).tag(mode)
+                        Button(action: { modeBinding.wrappedValue = mode }) {
+                            Text(mode.titleKey)
+                                .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.caption))
+                                .foregroundColor(modeBinding.wrappedValue == mode ? .white : CuteTheme.textPrimary)
+                                .frame(maxWidth: .infinity, minHeight: 32)
+                                .background(modeBinding.wrappedValue == mode ? CuteTheme.accent : CuteTheme.controlFill)
+                                .cornerRadius(10)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
-                .pickerStyle(.segmented)
                 .onChange(of: modeBinding.wrappedValue) { newValue in
                     // Keep legacy toggles in sync for now.
                     microphoneInputEnabled = (newValue == .microphone)
