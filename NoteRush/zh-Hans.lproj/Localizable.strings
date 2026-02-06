@@ -118,3 +118,5 @@
 "Color Notes" = "音符色彩";
 "Metronome" = "节拍开关";
 "Beat.Button" = "节拍";
+"MIDI.DeviceDetected.Title" = "检测到 MIDI 设备";
+"MIDI.DeviceDetected.Message" = "你可以在设置里打开「MIDI 输入」，用键盘弹奏来输入音符。";

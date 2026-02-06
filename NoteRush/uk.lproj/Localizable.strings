@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "Розфарбувати кнопки відповіді";
 "Color Notes" = "Розфарбувати ноти";
+"MIDI.DeviceDetected.Title" = "Виявлено MIDI-пристрій";
+"MIDI.DeviceDetected.Message" = "Увімкніть «Вхід MIDI» у налаштуваннях, щоб вводити ноти з клавіатури.";

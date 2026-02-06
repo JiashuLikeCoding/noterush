@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "Tô màu phím trả lời";
 "Color Notes" = "Tô màu nốt";
+"MIDI.DeviceDetected.Title" = "Đã phát hiện thiết bị MIDI";
+"MIDI.DeviceDetected.Message" = "Bạn có thể bật “Đầu vào MIDI” trong Cài đặt để chơi nốt bằng bàn phím.";

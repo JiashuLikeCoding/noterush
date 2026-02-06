@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "Väritä vastausnäppäimet";
 "Color Notes" = "Väritä nuotit";
+"MIDI.DeviceDetected.Title" = "MIDI-laite havaittu";
+"MIDI.DeviceDetected.Message" = "Voit ottaa ”MIDI-tulo” käyttöön Asetuksissa ja soittaa nuotteja koskettimilla.";

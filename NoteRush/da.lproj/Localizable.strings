@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "Farv svartaster";
 "Color Notes" = "Farv noder";
+"MIDI.DeviceDetected.Title" = "MIDI-enhed registreret";
+"MIDI.DeviceDetected.Message" = "Du kan slå “MIDI-input” til i Indstillinger for at spille noder med dit keyboard.";

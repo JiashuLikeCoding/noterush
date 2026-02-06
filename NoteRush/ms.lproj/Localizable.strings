@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "Warnakan kekunci jawapan";
 "Color Notes" = "Warnakan nota";
+"MIDI.DeviceDetected.Title" = "Peranti MIDI dikesan";
+"MIDI.DeviceDetected.Message" = "Aktifkan “Input MIDI” di Tetapan untuk memainkan nota dengan papan kekunci.";

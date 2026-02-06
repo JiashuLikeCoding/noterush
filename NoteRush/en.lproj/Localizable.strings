@@ -118,3 +118,5 @@
 "Color Notes" = "Color Notes";
 "Metronome" = "Metronome";
 "Beat.Button" = "Beat";
+"MIDI.DeviceDetected.Title" = "MIDI device detected";
+"MIDI.DeviceDetected.Message" = "You can enable MIDI Input in Settings to play notes with your keyboard.";

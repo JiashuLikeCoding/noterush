@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "Färglägg svarstangenter";
 "Color Notes" = "Färglägg noter";
+"MIDI.DeviceDetected.Title" = "MIDI-enhet upptäckt";
+"MIDI.DeviceDetected.Message" = "Du kan slå på ”MIDI-ingång” i Inställningar för att spela noter med ditt keyboard.";

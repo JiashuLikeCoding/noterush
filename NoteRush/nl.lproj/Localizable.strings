@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "Antwoordtoetsen kleuren";
 "Color Notes" = "Noten kleuren";
+"MIDI.DeviceDetected.Title" = "MIDI-apparaat gedetecteerd";
+"MIDI.DeviceDetected.Message" = "Je kunt in Instellingen «MIDI-invoer» inschakelen om noten te spelen met je keyboard.";

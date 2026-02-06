@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "צבע מקשי תשובה";
 "Color Notes" = "צבע תווים";
+"MIDI.DeviceDetected.Title" = "זוהה התקן MIDI";
+"MIDI.DeviceDetected.Message" = "אפשר להפעיל קלט MIDI בהגדרות כדי לנגן תווים עם המקלדת.";

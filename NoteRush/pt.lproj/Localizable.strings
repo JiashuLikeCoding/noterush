@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "Colorir teclas de resposta";
 "Color Notes" = "Colorir notas";
+"MIDI.DeviceDetected.Title" = "Dispositivo MIDI detectado";
+"MIDI.DeviceDetected.Message" = "Você pode ativar «Entrada MIDI» em Ajustes para tocar notas no teclado.";

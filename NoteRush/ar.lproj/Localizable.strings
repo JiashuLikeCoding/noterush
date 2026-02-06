@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "تلوين أزرار الإجابة";
 "Color Notes" = "تلوين النغمات";
+"MIDI.DeviceDetected.Title" = "تم اكتشاف جهاز MIDI";
+"MIDI.DeviceDetected.Message" = "يمكنك تفعيل «إدخال MIDI» من الإعدادات لعزف النغمات عبر لوحة المفاتيح.";

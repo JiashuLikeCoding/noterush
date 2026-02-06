@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "Válasz billentyűk színezése";
 "Color Notes" = "Hangok színezése";
+"MIDI.DeviceDetected.Title" = "MIDI-eszköz észlelve";
+"MIDI.DeviceDetected.Message" = "A Beállításokban bekapcsolhatod a „MIDI-bemenetet”, és a billentyűzettel játszhatsz hangokat.";

@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "उत्तर कुंजियों को रंगें";
 "Color Notes" = "नोटों को रंगें";
+"MIDI.DeviceDetected.Title" = "MIDI डिवाइस मिला";
+"MIDI.DeviceDetected.Message" = "कीबोर्ड से नोट बजाने के लिए सेटिंग्स में “MIDI इनपुट” चालू करें।";

@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "Obarvit klávesy odpovědi";
 "Color Notes" = "Obarvit noty";
+"MIDI.DeviceDetected.Title" = "Zjištěno zařízení MIDI";
+"MIDI.DeviceDetected.Message" = "V Nastavení můžete zapnout „Vstup MIDI“ a hrát noty na klaviatuře.";

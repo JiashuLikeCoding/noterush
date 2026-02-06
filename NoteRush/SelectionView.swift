@@ -32,6 +32,10 @@ struct SelectionView: View {
     let onStartSong: (SongTemplate, Set<NoteLetter>, StaffClefMode) -> Void
     @State private var showingSettings: Bool = false
 
+    @StateObject private var midiMonitor = MidiDeviceMonitor()
+    @State private var showMidiDetectedAlert: Bool = false
+    @State private var lastHadMidiSources: Bool = false
+
     @AppStorage(AppSettingsKeys.soundEffectsEnabled) private var soundEnabled: Bool = true
     @AppStorage(AppSettingsKeys.showCorrectHint) private var showCorrectHint: Bool = false
     @AppStorage(AppSettingsKeys.appLanguage) private var appLanguageRaw: String = AppLanguage.system.rawValue
@@ -115,6 +119,22 @@ struct SelectionView: View {
         }
         .padding(.top, 16)
         .zenBackground()
+        .onAppear {
+            midiMonitor.start()
+            lastHadMidiSources = midiMonitor.hasSources
+        }
+        .onChange(of: midiMonitor.hasSources) { hasSources in
+            // Only alert on transition: no -> yes
+            if !lastHadMidiSources && hasSources {
+                showMidiDetectedAlert = true
+            }
+            lastHadMidiSources = hasSources
+        }
+        .alert("MIDI.DeviceDetected.Title", isPresented: $showMidiDetectedAlert) {
+            Button("OK") {}
+        } message: {
+            Text("MIDI.DeviceDetected.Message")
+        }
     }
 }
 

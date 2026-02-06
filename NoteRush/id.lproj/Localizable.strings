@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "Warnai tombol jawaban";
 "Color Notes" = "Warnai not";
+"MIDI.DeviceDetected.Title" = "Perangkat MIDI terdeteksi";
+"MIDI.DeviceDetected.Message" = "Aktifkan «Input MIDI» di Pengaturan untuk memainkan nada dengan keyboard.";

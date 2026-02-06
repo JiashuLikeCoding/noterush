@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "按鍵色彩";
 "Color Notes" = "音符色彩";
+"MIDI.DeviceDetected.Title" = "偵測到 MIDI 裝置";
+"MIDI.DeviceDetected.Message" = "你可以在設定裡開啟「MIDI 輸入」，用鍵盤彈奏來輸入音符。";

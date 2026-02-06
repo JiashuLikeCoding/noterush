@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "Antworttasten einfärben";
 "Color Notes" = "Noten einfärben";
+"MIDI.DeviceDetected.Title" = "MIDI-Gerät erkannt";
+"MIDI.DeviceDetected.Message" = "Aktiviere in den Einstellungen „MIDI-Eingang“, um Noten über dein Keyboard einzugeben.";

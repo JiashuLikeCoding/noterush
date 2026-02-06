@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "Cevap tuşlarını renklendir";
 "Color Notes" = "Notaları renklendir";
+"MIDI.DeviceDetected.Title" = "MIDI aygıtı algılandı";
+"MIDI.DeviceDetected.Message" = "Klavye ile nota çalmak için Ayarlar’dan “MIDI girişi”ni açabilirsiniz.";

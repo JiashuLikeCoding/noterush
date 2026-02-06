@@ -116,3 +116,5 @@
 
 "Color Answer Keys" = "Colorează tastele răspunsului";
 "Color Notes" = "Colorează note";
+"MIDI.DeviceDetected.Title" = "Dispozitiv MIDI detectat";
+"MIDI.DeviceDetected.Message" = "Poți activa «Intrare MIDI» în Setări pentru a cânta notele de la claviatură.";
