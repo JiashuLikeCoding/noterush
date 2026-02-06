@@ -7,6 +7,10 @@
 "Sound Effects" = "효과음";
 "Show Correct Answer on Miss" = "오답 시 정답 표시";
 "Language" = "언어";
+"Microphone Input" = "마이크 입력";
+
+"Theme" = "테마";
+
 "Session Settings" = "세션 설정";
 "BPM" = "BPM";
 "Time Signature" = "박자표";

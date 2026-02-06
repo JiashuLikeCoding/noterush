@@ -7,6 +7,10 @@
 "Sound Effects" = "เอฟเฟกต์เสียง";
 "Show Correct Answer on Miss" = "แสดงคำตอบที่ถูกเมื่อพลาด";
 "Language" = "ภาษา";
+"Microphone Input" = "อินพุตไมโครโฟน";
+
+"Theme" = "ธีม";
+
 "Session Settings" = "การตั้งค่าเซสชัน";
 "BPM" = "BPM";
 "Time Signature" = "อัตราจังหวะ";

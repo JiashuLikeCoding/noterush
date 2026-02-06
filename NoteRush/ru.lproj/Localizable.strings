@@ -7,6 +7,10 @@
 "Sound Effects" = "Звуковые эффекты";
 "Show Correct Answer on Miss" = "Показывать правильный ответ при ошибке";
 "Language" = "Язык";
+"Microphone Input" = "Вход микрофона";
+
+"Theme" = "Тема";
+
 "Session Settings" = "Настройки сессии";
 "BPM" = "BPM";
 "Time Signature" = "Размер";

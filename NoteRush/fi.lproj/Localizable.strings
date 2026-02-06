@@ -7,6 +7,10 @@
 "Sound Effects" = "Äänitehosteet";
 "Show Correct Answer on Miss" = "Näytä oikea vastaus virheessä";
 "Language" = "Kieli";
+"Microphone Input" = "Mikrofonitulo";
+
+"Theme" = "Teema";
+
 "Session Settings" = "Istunnon asetukset";
 "BPM" = "BPM";
 "Time Signature" = "Tahtilaji";

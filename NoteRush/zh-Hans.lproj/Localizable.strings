@@ -7,6 +7,10 @@
 "Sound Effects" = "音效";
 "Show Correct Answer on Miss" = "答错时显示正确答案";
 "Language" = "语言";
+"Microphone Input" = "麦克风输入";
+
+"Theme" = "主题";
+
 "Session Settings" = "会话设置";
 "BPM" = "BPM";
 "Time Signature" = "拍号";

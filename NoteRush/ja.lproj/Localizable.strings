@@ -7,6 +7,10 @@
 "Sound Effects" = "効果音";
 "Show Correct Answer on Miss" = "ミス時に正解を表示";
 "Language" = "言語";
+"Microphone Input" = "マイク入力";
+
+"Theme" = "テーマ";
+
 "Session Settings" = "セッション設定";
 "BPM" = "BPM";
 "Time Signature" = "拍子";

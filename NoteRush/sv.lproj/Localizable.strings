@@ -7,6 +7,10 @@
 "Sound Effects" = "Ljudeffekter";
 "Show Correct Answer on Miss" = "Visa rätt svar vid fel";
 "Language" = "Språk";
+"Microphone Input" = "Mikrofoningång";
+
+"Theme" = "Tema";
+
 "Session Settings" = "Sessionsinställningar";
 "BPM" = "BPM";
 "Time Signature" = "Taktart";
