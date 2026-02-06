@@ -485,33 +485,38 @@ struct AppSettingsCard: View {
     @State private var showingLanguagePicker: Bool = false
 
     var body: some View {
+        // IMPORTANT: CuteTheme reads from UserDefaults. In SwiftUI, changing @AppStorage
+        // can update only the subview that uses that binding. We want the whole settings card
+        // to repaint immediately when appThemeRaw changes, so we derive a palette from it here.
+        let palette = (AppTheme(rawValue: appThemeRaw) ?? .zen).palette
+
         VStack(alignment: .leading, spacing: 12) {
             Text("App Settings")
                 .font(.system(size: CuteTheme.FontSize.section, weight: .bold, design: .rounded))
-                .foregroundColor(CuteTheme.textPrimary)
+                .foregroundColor(palette.textPrimary)
 
             Toggle("Sound Effects", isOn: $soundEnabled)
-                .tint(CuteTheme.accent)
+                .tint(palette.accent)
 
             Toggle("Show Correct Answer on Miss", isOn: $showCorrectHint)
-                .tint(CuteTheme.accent)
+                .tint(palette.accent)
 
             Toggle("Show Note Name", isOn: $showNoteName)
-                .tint(CuteTheme.accent)
+                .tint(palette.accent)
 
             Toggle("Show Feedback Note Name", isOn: $showJudgementNoteName)
-                .tint(CuteTheme.accent)
+                .tint(palette.accent)
 
             Toggle("Color Answer Keys", isOn: $useColoredKeys)
-                .tint(CuteTheme.accent)
+                .tint(palette.accent)
 
             Toggle("Color Notes", isOn: $useColoredNotes)
-                .tint(CuteTheme.accent)
+                .tint(palette.accent)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Input")
                     .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.body))
-                    .foregroundColor(CuteTheme.textSecondary)
+                    .foregroundColor(palette.textSecondary)
 
                 let modeBinding = Binding<InputMode>(
                     get: { InputMode(rawValue: inputModeRaw) ?? .buttons },
@@ -523,9 +528,9 @@ struct AppSettingsCard: View {
                         Button(action: { modeBinding.wrappedValue = mode }) {
                             Text(mode.titleKey)
                                 .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.caption))
-                                .foregroundColor(modeBinding.wrappedValue == mode ? .white : CuteTheme.textPrimary)
+                                .foregroundColor(modeBinding.wrappedValue == mode ? .white : palette.textPrimary)
                                 .frame(maxWidth: .infinity, minHeight: 32)
-                                .background(modeBinding.wrappedValue == mode ? CuteTheme.accent : CuteTheme.controlFill)
+                                .background(modeBinding.wrappedValue == mode ? palette.accent : palette.controlFill)
                                 .cornerRadius(10)
                         }
                         .buttonStyle(.plain)
@@ -544,7 +549,7 @@ struct AppSettingsCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Theme")
                     .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.body))
-                    .foregroundColor(CuteTheme.textSecondary)
+                    .foregroundColor(palette.textSecondary)
 
                 ThemePicker(selectedRaw: $appThemeRaw)
             }
@@ -552,7 +557,7 @@ struct AppSettingsCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Note Display")
                     .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.body))
-                    .foregroundColor(CuteTheme.textSecondary)
+                    .foregroundColor(palette.textSecondary)
 
                 let modes = NoteDisplayRhythmMode.allCases
                 HStack(spacing: 8) {
@@ -562,9 +567,9 @@ struct AppSettingsCard: View {
                         }) {
                             Text(mode.titleKey)
                                 .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.caption))
-                                .foregroundColor(noteDisplayRhythmModeRaw == mode.rawValue ? .white : CuteTheme.textPrimary)
+                                .foregroundColor(noteDisplayRhythmModeRaw == mode.rawValue ? .white : palette.textPrimary)
                                 .frame(maxWidth: .infinity, minHeight: 32)
-                                .background(noteDisplayRhythmModeRaw == mode.rawValue ? CuteTheme.accent : CuteTheme.controlFill)
+                                .background(noteDisplayRhythmModeRaw == mode.rawValue ? palette.accent : palette.controlFill)
                                 .cornerRadius(10)
                         }
                         .buttonStyle(.plain)
@@ -575,7 +580,7 @@ struct AppSettingsCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Language")
                     .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.body))
-                    .foregroundColor(CuteTheme.textSecondary)
+                    .foregroundColor(palette.textSecondary)
 
                 let languages = AppLanguage.allCases
                 let selectedLanguage = AppLanguage(rawValue: appLanguageRaw) ?? .system
