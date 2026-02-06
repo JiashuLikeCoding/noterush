@@ -497,13 +497,11 @@ struct AppSettingsCard: View {
     @State private var showingLanguagePicker: Bool = false
 
     var body: some View {
-        @Environment(\.colorScheme) var colorScheme
         // IMPORTANT: CuteTheme reads from UserDefaults. In SwiftUI, changing @AppStorage
         // can update only the subview that uses that binding. We want the whole settings card
         // to repaint immediately when appThemeRaw changes, so we derive a palette from it here.
-        // Also use darkPalette when in dark mode.
         let theme = AppTheme(rawValue: appThemeRaw) ?? .zen
-        let palette = (colorScheme == .dark) ? theme.darkPalette : theme.palette
+        let palette = theme.palette
 
         VStack(alignment: .leading, spacing: 12) {
             Text("App Settings")
