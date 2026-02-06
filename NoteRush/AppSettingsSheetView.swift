@@ -5,7 +5,6 @@ struct AppSettingsSheetView: View {
     @State private var themeRefreshToken: UUID = UUID()
 
     @AppStorage(AppSettingsKeys.soundEffectsEnabled) private var soundEnabled: Bool = true
-    @AppStorage(AppSettingsKeys.showCorrectHint) private var showCorrectHint: Bool = false
     @AppStorage(AppSettingsKeys.appLanguage) private var appLanguageRaw: String = AppLanguage.system.rawValue
     @AppStorage(AppSettingsKeys.appTheme) private var appThemeRaw: String = AppTheme.zen.rawValue
     @AppStorage(AppSettingsKeys.showNoteName) private var showNoteName: Bool = false
@@ -22,7 +21,6 @@ struct AppSettingsSheetView: View {
             ScrollView {
                 AppSettingsCard(
                     soundEnabled: $soundEnabled,
-                    showCorrectHint: $showCorrectHint,
                     appLanguageRaw: $appLanguageRaw,
                     appThemeRaw: $appThemeRaw,
                     showNoteName: $showNoteName,

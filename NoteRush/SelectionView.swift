@@ -37,7 +37,6 @@ struct SelectionView: View {
     @State private var lastHadMidiSources: Bool = false
 
     @AppStorage(AppSettingsKeys.soundEffectsEnabled) private var soundEnabled: Bool = true
-    @AppStorage(AppSettingsKeys.showCorrectHint) private var showCorrectHint: Bool = false
     @AppStorage(AppSettingsKeys.appLanguage) private var appLanguageRaw: String = AppLanguage.system.rawValue
     @AppStorage(AppSettingsKeys.appTheme) private var appThemeRaw: String = AppTheme.zen.rawValue
     @AppStorage(AppSettingsKeys.staffClefMode) private var staffClefModeRaw: String = StaffClefMode.treble.rawValue
@@ -101,7 +100,6 @@ struct SelectionView: View {
                     } else {
                         AppSettingsCard(
                             soundEnabled: $soundEnabled,
-                            showCorrectHint: $showCorrectHint,
                             appLanguageRaw: $appLanguageRaw,
                             appThemeRaw: $appThemeRaw,
                             showNoteName: $showNoteName,
@@ -480,7 +478,6 @@ struct ThemeSwatch: View {
 
 struct AppSettingsCard: View {
     @Binding var soundEnabled: Bool
-    @Binding var showCorrectHint: Bool
     @Binding var appLanguageRaw: String
     @Binding var appThemeRaw: String
     @Binding var showNoteName: Bool
@@ -506,9 +503,6 @@ struct AppSettingsCard: View {
                 .foregroundColor(palette.textPrimary)
 
             Toggle("Sound Effects", isOn: $soundEnabled)
-                .tint(palette.accent)
-
-            Toggle("Show Correct Answer on Miss", isOn: $showCorrectHint)
                 .tint(palette.accent)
 
             Toggle("Show Note Name", isOn: $showNoteName)
