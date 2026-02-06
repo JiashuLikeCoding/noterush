@@ -106,6 +106,8 @@
 "Show Note Name" = "显示音名";
 "Show Feedback Note Name" = "判定圈显示音名";
 "Done" = "完成";
+"Restart" = "重来";
+
 "Color Answer Keys" = "按键色彩";
 "Color Notes" = "音符色彩";
 "Metronome" = "节拍开关";
