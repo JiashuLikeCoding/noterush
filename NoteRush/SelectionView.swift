@@ -420,21 +420,22 @@ struct ThemePicker: View {
     @Binding var selectedRaw: String
 
     private let columns: [GridItem] = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10)
     ]
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 12) {
+        LazyVGrid(columns: columns, spacing: 10) {
             ForEach(AppTheme.allCases) { theme in
                 Button(action: { selectedRaw = theme.rawValue }) {
                     ThemeSwatch(theme: theme, isSelected: selectedRaw == theme.rawValue)
                         .frame(maxWidth: .infinity)
+                        .contentShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 0)
     }
 }
 
@@ -445,27 +446,26 @@ struct ThemeSwatch: View {
     var body: some View {
         let palette = theme.palette
 
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             Circle()
                 .fill(palette.accent)
-                .frame(width: 44, height: 44)
+                .frame(width: 28, height: 28)
                 .overlay(
                     Circle()
-                        .stroke(isSelected ? palette.accent : palette.cardBorder, lineWidth: isSelected ? 3 : 1)
+                        .stroke(isSelected ? palette.accent : CuteTheme.cardBorder, lineWidth: isSelected ? 3 : 1)
                 )
-                .shadow(color: Color.black.opacity(0.10), radius: 6, x: 0, y: 4)
 
             Text(theme.displayName)
-                .font(.custom("AvenirNext-DemiBold", size: 11))
+                .font(.custom("AvenirNext-DemiBold", size: 10))
                 .foregroundColor(CuteTheme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 4)
         .frame(maxWidth: .infinity)
-        .background(CuteTheme.cardBackground)
-        .cornerRadius(14)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(isSelected ? palette.accent.opacity(0.25) : CuteTheme.cardBorder, lineWidth: 1)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(CuteTheme.controlFill.opacity(isSelected ? 0.25 : 0.0))
         )
     }
 }
