@@ -118,3 +118,7 @@
 "Color Notes" = "Warnai not";
 "MIDI.DeviceDetected.Title" = "Perangkat MIDI terdeteksi";
 "MIDI.DeviceDetected.Message" = "Aktifkan «Input MIDI» di Pengaturan untuk memainkan nada dengan keyboard.";
+"Input" = "Input";
+"InputMode.Buttons" = "Tombol";
+"InputMode.Microphone" = "Mikrofon";
+"InputMode.MIDI" = "MIDI";

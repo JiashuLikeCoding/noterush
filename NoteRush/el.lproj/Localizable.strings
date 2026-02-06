@@ -118,3 +118,7 @@
 "Color Notes" = "Χρωματισμός νοτών";
 "MIDI.DeviceDetected.Title" = "Εντοπίστηκε συσκευή MIDI";
 "MIDI.DeviceDetected.Message" = "Μπορείτε να ενεργοποιήσετε την «Είσοδο MIDI» στις Ρυθμίσεις για να παίζετε νότες από το πληκτρολόγιο.";
+"Input" = "Είσοδος";
+"InputMode.Buttons" = "Κουμπιά";
+"InputMode.Microphone" = "Μικρόφωνο";
+"InputMode.MIDI" = "MIDI";

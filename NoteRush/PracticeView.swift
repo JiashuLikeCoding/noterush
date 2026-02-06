@@ -8,8 +8,14 @@ struct PracticeView: View {
     @AppStorage(AppSettingsKeys.useColoredKeys) private var useColoredKeys: Bool = true
     @AppStorage(AppSettingsKeys.useColoredNotes) private var useColoredNotes: Bool = false
     @AppStorage(AppSettingsKeys.noteDisplayRhythmMode) private var noteDisplayRhythmModeRaw: String = NoteDisplayRhythmMode.quarter.rawValue
-    @AppStorage(AppSettingsKeys.microphoneInputEnabled) private var microphoneInputEnabled: Bool = false
-    @AppStorage(AppSettingsKeys.midiInputEnabled) private var midiInputEnabled: Bool = false
+    @AppStorage(AppSettingsKeys.inputMode) private var inputModeRaw: String = InputMode.buttons.rawValue
+
+    private var inputMode: InputMode {
+        return InputMode(rawValue: inputModeRaw) ?? .buttons
+    }
+
+    private var microphoneInputEnabled: Bool { inputMode == .microphone }
+    private var midiInputEnabled: Bool { inputMode == .midi }
 
     private var staffClefMode: StaffClefMode {
         return StaffClefMode(rawValue: staffClefModeRaw) ?? .treble

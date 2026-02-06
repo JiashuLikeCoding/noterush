@@ -118,3 +118,7 @@
 "Color Notes" = "নোট রঙ করুন";
 "MIDI.DeviceDetected.Title" = "MIDI ডিভাইস শনাক্ত হয়েছে";
 "MIDI.DeviceDetected.Message" = "কিবোর্ড দিয়ে নোট বাজাতে সেটিংসে “MIDI ইনপুট” চালু করুন।";
+"Input" = "ইনপুট";
+"InputMode.Buttons" = "বোতাম";
+"InputMode.Microphone" = "মাইক্রোফোন";
+"InputMode.MIDI" = "MIDI";

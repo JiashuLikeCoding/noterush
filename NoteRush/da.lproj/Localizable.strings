@@ -118,3 +118,7 @@
 "Color Notes" = "Farv noder";
 "MIDI.DeviceDetected.Title" = "MIDI-enhed registreret";
 "MIDI.DeviceDetected.Message" = "Du kan slå “MIDI-input” til i Indstillinger for at spille noder med dit keyboard.";
+"Input" = "Input";
+"InputMode.Buttons" = "Knapper";
+"InputMode.Microphone" = "Mikrofon";
+"InputMode.MIDI" = "MIDI";

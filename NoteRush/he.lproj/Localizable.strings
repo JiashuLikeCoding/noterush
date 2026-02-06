@@ -118,3 +118,7 @@
 "Color Notes" = "צבע תווים";
 "MIDI.DeviceDetected.Title" = "זוהה התקן MIDI";
 "MIDI.DeviceDetected.Message" = "אפשר להפעיל קלט MIDI בהגדרות כדי לנגן תווים עם המקלדת.";
+"Input" = "קלט";
+"InputMode.Buttons" = "כפתורים";
+"InputMode.Microphone" = "מיקרופון";
+"InputMode.MIDI" = "MIDI";

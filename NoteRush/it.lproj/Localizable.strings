@@ -118,3 +118,7 @@
 "Color Notes" = "Colora le note";
 "MIDI.DeviceDetected.Title" = "Dispositivo MIDI rilevato";
 "MIDI.DeviceDetected.Message" = "Puoi attivare «Ingresso MIDI» nelle Impostazioni per suonare le note con la tastiera.";
+"Input" = "Input";
+"InputMode.Buttons" = "Pulsanti";
+"InputMode.Microphone" = "Microfono";
+"InputMode.MIDI" = "MIDI";

@@ -13,6 +13,7 @@ struct AppSettingsSheetView: View {
     @AppStorage(AppSettingsKeys.noteDisplayRhythmMode) private var noteDisplayRhythmModeRaw: String = NoteDisplayRhythmMode.quarter.rawValue
     @AppStorage(AppSettingsKeys.microphoneInputEnabled) private var microphoneInputEnabled: Bool = false
     @AppStorage(AppSettingsKeys.midiInputEnabled) private var midiInputEnabled: Bool = false
+    @AppStorage(AppSettingsKeys.inputMode) private var inputModeRaw: String = InputMode.buttons.rawValue
 
     var body: some View {
         NavigationView {
@@ -28,7 +29,8 @@ struct AppSettingsSheetView: View {
                     useColoredNotes: $useColoredNotes,
                     noteDisplayRhythmModeRaw: $noteDisplayRhythmModeRaw,
                     microphoneInputEnabled: $microphoneInputEnabled,
-                    midiInputEnabled: $midiInputEnabled
+                    midiInputEnabled: $midiInputEnabled,
+                    inputModeRaw: $inputModeRaw
                 )
                 .padding(16)
             }

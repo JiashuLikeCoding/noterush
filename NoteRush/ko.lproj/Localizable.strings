@@ -118,3 +118,7 @@
 "Color Notes" = "음표 색상";
 "MIDI.DeviceDetected.Title" = "MIDI 기기를 감지했습니다";
 "MIDI.DeviceDetected.Message" = "설정에서 “MIDI 입력”을 켜면 키보드로 음을 입력할 수 있어요.";
+"Input" = "입력";
+"InputMode.Buttons" = "버튼";
+"InputMode.Microphone" = "마이크";
+"InputMode.MIDI" = "MIDI";

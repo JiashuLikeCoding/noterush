@@ -118,3 +118,7 @@
 "Color Notes" = "Farg noter";
 "MIDI.DeviceDetected.Title" = "MIDI-enhet oppdaget";
 "MIDI.DeviceDetected.Message" = "Du kan slå på «MIDI-inngang» i Innstillinger for å spille noter med keyboardet.";
+"Input" = "Inndata";
+"InputMode.Buttons" = "Knapper";
+"InputMode.Microphone" = "Mikrofon";
+"InputMode.MIDI" = "MIDI";

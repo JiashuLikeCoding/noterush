@@ -118,3 +118,7 @@
 "Color Notes" = "Noten einfärben";
 "MIDI.DeviceDetected.Title" = "MIDI-Gerät erkannt";
 "MIDI.DeviceDetected.Message" = "Aktiviere in den Einstellungen „MIDI-Eingang“, um Noten über dein Keyboard einzugeben.";
+"Input" = "Eingabe";
+"InputMode.Buttons" = "Tasten";
+"InputMode.Microphone" = "Mikrofon";
+"InputMode.MIDI" = "MIDI";

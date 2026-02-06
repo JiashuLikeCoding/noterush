@@ -118,3 +118,7 @@
 "Color Notes" = "ทำสีโน้ต";
 "MIDI.DeviceDetected.Title" = "ตรวจพบอุปกรณ์ MIDI";
 "MIDI.DeviceDetected.Message" = "คุณสามารถเปิด “อินพุต MIDI” ในการตั้งค่า เพื่อเล่นโน้ตด้วยคีย์บอร์ดได้";
+"Input" = "อินพุต";
+"InputMode.Buttons" = "ปุ่ม";
+"InputMode.Microphone" = "ไมโครโฟน";
+"InputMode.MIDI" = "MIDI";

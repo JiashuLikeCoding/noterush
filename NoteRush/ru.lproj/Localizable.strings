@@ -118,3 +118,7 @@
 "Color Notes" = "Цветные ноты";
 "MIDI.DeviceDetected.Title" = "Обнаружено MIDI-устройство";
 "MIDI.DeviceDetected.Message" = "Включите «Ввод MIDI» в настройках, чтобы вводить ноты с клавиатуры.";
+"Input" = "Ввод";
+"InputMode.Buttons" = "Кнопки";
+"InputMode.Microphone" = "Микрофон";
+"InputMode.MIDI" = "MIDI";

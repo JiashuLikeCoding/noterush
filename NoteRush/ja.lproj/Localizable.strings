@@ -118,3 +118,7 @@
 "Color Notes" = "音符に色を付ける";
 "MIDI.DeviceDetected.Title" = "MIDIデバイスを検出しました";
 "MIDI.DeviceDetected.Message" = "設定で「MIDI入力」をオンにすると、キーボードで音符を入力できます。";
+"Input" = "入力";
+"InputMode.Buttons" = "ボタン";
+"InputMode.Microphone" = "マイク";
+"InputMode.MIDI" = "MIDI";

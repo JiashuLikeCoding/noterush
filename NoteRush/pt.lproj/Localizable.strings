@@ -118,3 +118,7 @@
 "Color Notes" = "Colorir notas";
 "MIDI.DeviceDetected.Title" = "Dispositivo MIDI detectado";
 "MIDI.DeviceDetected.Message" = "Você pode ativar «Entrada MIDI» em Ajustes para tocar notas no teclado.";
+"Input" = "Entrada";
+"InputMode.Buttons" = "Botões";
+"InputMode.Microphone" = "Microfone";
+"InputMode.MIDI" = "MIDI";

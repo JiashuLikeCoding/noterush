@@ -118,3 +118,7 @@
 "Color Notes" = "Розфарбувати ноти";
 "MIDI.DeviceDetected.Title" = "Виявлено MIDI-пристрій";
 "MIDI.DeviceDetected.Message" = "Увімкніть «Вхід MIDI» у налаштуваннях, щоб вводити ноти з клавіатури.";
+"Input" = "Ввід";
+"InputMode.Buttons" = "Кнопки";
+"InputMode.Microphone" = "Мікрофон";
+"InputMode.MIDI" = "MIDI";

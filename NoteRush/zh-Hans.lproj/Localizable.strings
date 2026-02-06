@@ -120,3 +120,7 @@
 "Beat.Button" = "节拍";
 "MIDI.DeviceDetected.Title" = "检测到 MIDI 设备";
 "MIDI.DeviceDetected.Message" = "你可以在设置里打开「MIDI 输入」，用键盘弹奏来输入音符。";
+"Input" = "输入方式";
+"InputMode.Buttons" = "按键";
+"InputMode.Microphone" = "麦克风";
+"InputMode.MIDI" = "MIDI";

@@ -49,6 +49,7 @@ struct SelectionView: View {
     @AppStorage(AppSettingsKeys.noteDisplayRhythmMode) private var noteDisplayRhythmModeRaw: String = NoteDisplayRhythmMode.quarter.rawValue
     @AppStorage(AppSettingsKeys.microphoneInputEnabled) private var microphoneInputEnabled: Bool = false
     @AppStorage(AppSettingsKeys.midiInputEnabled) private var midiInputEnabled: Bool = false
+    @AppStorage(AppSettingsKeys.inputMode) private var inputModeRaw: String = InputMode.buttons.rawValue
 
     @State private var songTargetLetters: [UUID: Set<NoteLetter>] = [:]
 
@@ -109,7 +110,8 @@ struct SelectionView: View {
                             useColoredNotes: $useColoredNotes,
                             noteDisplayRhythmModeRaw: $noteDisplayRhythmModeRaw,
                             microphoneInputEnabled: $microphoneInputEnabled,
-                            midiInputEnabled: $midiInputEnabled
+                            midiInputEnabled: $midiInputEnabled,
+                            inputModeRaw: $inputModeRaw
                         )
                     }
                 }
@@ -491,6 +493,7 @@ struct AppSettingsCard: View {
     @Binding var noteDisplayRhythmModeRaw: String
     @Binding var microphoneInputEnabled: Bool
     @Binding var midiInputEnabled: Bool
+    @Binding var inputModeRaw: String
     @State private var showingLanguagePicker: Bool = false
 
     var body: some View {
@@ -517,11 +520,31 @@ struct AppSettingsCard: View {
             Toggle("Color Notes", isOn: $useColoredNotes)
                 .tint(CuteTheme.accent)
 
-            Toggle("Microphone Input", isOn: $microphoneInputEnabled)
-                .tint(CuteTheme.accent)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Input")
+                    .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.body))
+                    .foregroundColor(CuteTheme.textSecondary)
 
-            Toggle("MIDI Input", isOn: $midiInputEnabled)
-                .tint(CuteTheme.accent)
+                let modeBinding = Binding<InputMode>(
+                    get: { InputMode(rawValue: inputModeRaw) ?? .buttons },
+                    set: { inputModeRaw = $0.rawValue }
+                )
+
+                Picker("Input", selection: modeBinding) {
+                    ForEach(InputMode.allCases) { mode in
+                        Text(mode.titleKey).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: modeBinding.wrappedValue) { newValue in
+                    // Keep legacy toggles in sync for now.
+                    microphoneInputEnabled = (newValue == .microphone)
+                    midiInputEnabled = (newValue == .midi)
+                }
+            }
+
+            // Legacy toggles are kept only for backward compatibility with existing stored settings.
+            // UI no longer exposes them as separate independent switches.
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Theme")

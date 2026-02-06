@@ -118,3 +118,7 @@
 "Color Notes" = "Warnakan nota";
 "MIDI.DeviceDetected.Title" = "Peranti MIDI dikesan";
 "MIDI.DeviceDetected.Message" = "Aktifkan “Input MIDI” di Tetapan untuk memainkan nota dengan papan kekunci.";
+"Input" = "Input";
+"InputMode.Buttons" = "Butang";
+"InputMode.Microphone" = "Mikrofon";
+"InputMode.MIDI" = "MIDI";

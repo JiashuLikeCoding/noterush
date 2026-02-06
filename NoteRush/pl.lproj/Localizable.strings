@@ -118,3 +118,7 @@
 "Color Notes" = "Koloruj nuty";
 "MIDI.DeviceDetected.Title" = "Wykryto urządzenie MIDI";
 "MIDI.DeviceDetected.Message" = "Włącz «Wejście MIDI» w Ustawieniach, aby grać nuty na klawiaturze.";
+"Input" = "Wejście";
+"InputMode.Buttons" = "Przyciski";
+"InputMode.Microphone" = "Mikrofon";
+"InputMode.MIDI" = "MIDI";
