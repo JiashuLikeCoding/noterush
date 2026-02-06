@@ -8,6 +8,7 @@ struct AppSettingsSheetView: View {
     @AppStorage(AppSettingsKeys.showCorrectHint) private var showCorrectHint: Bool = false
     @AppStorage(AppSettingsKeys.appLanguage) private var appLanguageRaw: String = AppLanguage.system.rawValue
     @AppStorage(AppSettingsKeys.appTheme) private var appThemeRaw: String = AppTheme.zen.rawValue
+    @AppStorage(AppSettingsKeys.appearanceMode) private var appearanceModeRaw: String = AppearanceMode.system.rawValue
     @AppStorage(AppSettingsKeys.showNoteName) private var showNoteName: Bool = false
     @AppStorage(AppSettingsKeys.showJudgementNoteName) private var showJudgementNoteName: Bool = false
     @AppStorage(AppSettingsKeys.useColoredKeys) private var useColoredKeys: Bool = true
@@ -25,6 +26,7 @@ struct AppSettingsSheetView: View {
                     showCorrectHint: $showCorrectHint,
                     appLanguageRaw: $appLanguageRaw,
                     appThemeRaw: $appThemeRaw,
+                    appearanceModeRaw: $appearanceModeRaw,
                     showNoteName: $showNoteName,
                     showJudgementNoteName: $showJudgementNoteName,
                     useColoredKeys: $useColoredKeys,
