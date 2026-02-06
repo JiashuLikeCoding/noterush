@@ -136,28 +136,28 @@ enum AppTheme: String, CaseIterable, Identifiable {
                 clefOpacity: 0.28
             )
 
-        case .classic: // 经典（黑白 + iOS 蓝）
+        case .classic: // 经典（纯黑白：强调色与字体一样的黑色）
             return ThemePalette(
                 backgroundTop: Color(red: 0.98, green: 0.98, blue: 0.98),
                 backgroundBottom: Color(red: 0.94, green: 0.94, blue: 0.95),
                 cardBackground: Color(red: 1.00, green: 1.00, blue: 1.00),
-                cardBorder: Color.black.opacity(0.08),
+                cardBorder: Color.black.opacity(0.10),
                 cardShadow: Color.black.opacity(0.08),
                 textPrimary: Color.black.opacity(0.88),
                 textSecondary: Color.black.opacity(0.55),
-                accent: Color(red: 0.00, green: 0.48, blue: 1.00),
-                accentPressed: Color(red: 0.00, green: 0.40, blue: 0.86),
-                lowAccent: Color(red: 0.00, green: 0.48, blue: 1.00),
-                midAccent: Color(red: 0.32, green: 0.72, blue: 0.66),
-                highAccent: Color(red: 0.56, green: 0.36, blue: 0.96),
+                accent: Color.black.opacity(0.88),
+                accentPressed: Color.black,
+                lowAccent: Color.black.opacity(0.70),
+                midAccent: Color.black.opacity(0.55),
+                highAccent: Color.black.opacity(0.40),
                 controlFill: Color.black.opacity(0.06),
                 controlFillPressed: Color.black.opacity(0.10),
                 controlBorder: Color.black.opacity(0.12),
                 chipFill: Color.black.opacity(0.05),
                 chipSelectedFill: Color.black.opacity(0.12),
                 chipBorder: Color.black.opacity(0.12),
-                feedbackSuccess: Color(red: 0.00, green: 0.48, blue: 1.00),
-                feedbackMiss: Color(red: 0.80, green: 0.28, blue: 0.28),
+                feedbackSuccess: Color.black.opacity(0.88),
+                feedbackMiss: Color.black.opacity(0.55),
                 staffLineColor: Color.black.opacity(0.22),
                 clefOpacity: 0.30
             )
