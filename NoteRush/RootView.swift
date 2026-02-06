@@ -123,7 +123,7 @@ struct RootView: View {
                     // Endless practice: keep generating random notes forever.
                     // For practice, we spawn only the selected letters so every note is a target.
                     activeSong = Song.generateEndless(
-                        title: "Practice \(Int(bpm)) BPM",
+                        title: String(format: NSLocalizedString("Title.PracticeBPM", comment: ""), Int(bpm)),
                         bpm: bpm,
                         timeSignature: .common,
                         rhythm: rhythm,
@@ -164,7 +164,7 @@ struct RootView: View {
                         return { newMode, currentBpm in
                             freePracticeClefModeRaw = newMode.rawValue
                             activeSong = Song.generateEndless(
-                                title: "Practice \(Int(currentBpm)) BPM",
+                                title: String(format: NSLocalizedString("Title.PracticeBPM", comment: ""), Int(currentBpm)),
                                 bpm: currentBpm,
                                 timeSignature: .common,
                                 rhythm: rhythm,

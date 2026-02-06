@@ -1,9 +1,9 @@
 import SwiftUI
 
 enum SelectionTab: String, CaseIterable, Identifiable {
-    case practiceNotes = "Free Practice"
-    case songs = "Songs"
-    case levels = "Level"
+    case practiceNotes
+    case songs
+    case levels
 
     var id: String { rawValue }
 
@@ -673,8 +673,8 @@ struct PracticeNotesCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             ZenCardHeader(
-                title: "Free Practice",
-                subtitle: "Pick clef and notes for a quiet drill.",
+                title: "Card.FreePractice.Title",
+                subtitle: "Card.FreePractice.Subtitle",
                 symbol: "waveform.path"
             )
 
@@ -757,7 +757,7 @@ struct LevelSelectionCard: View {
         VStack(alignment: .leading, spacing: 16) {
             ZenCardHeader(
                 title: "Practice Levels",
-                subtitle: "Structured paths for steady growth.",
+                subtitle: "Card.Levels.Subtitle",
                 symbol: "list.bullet.rectangle"
             )
 
@@ -809,10 +809,10 @@ struct LevelCardView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(level.title)
+                    Text(level.titleKey)
                         .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.body))
                         .foregroundColor(CuteTheme.textPrimary)
-                    Text(level.subtitle)
+                    Text(level.subtitleKey)
                         .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.caption))
                         .foregroundColor(CuteTheme.textSecondary)
                 }
@@ -825,7 +825,7 @@ struct LevelCardView: View {
             HStack(spacing: 6) {
                 ForEach(level.rangeTags, id: \.self) { tag in
                     NoteChipView(
-                        title: tag,
+                        title: LocalizedStringKey(tag),
                         isSelected: false,
                         isDimmed: true
                     )
@@ -859,7 +859,7 @@ struct SongSelectionCard: View {
         VStack(alignment: .leading, spacing: 16) {
             ZenCardHeader(
                 title: "Songs",
-                subtitle: "Pick a level and shape the clef.",
+                subtitle: "Card.Songs.Subtitle",
                 symbol: "music.note.list"
             )
 
@@ -1024,7 +1024,7 @@ struct SongCardView: View {
 }
 
 struct NoteChipView: View {
-    let title: String
+    let title: LocalizedStringKey
     let isSelected: Bool
     let isDimmed: Bool
 

@@ -131,3 +131,22 @@
 "Tag.Rhythm" = "節奏 %@";
 "Tag.RhythmMixed" = "節奏 %@ / 混合";
 "Tag.Mixed" = "混合";
+
+"Title.PracticeBPM" = "練習 %d BPM";
+"Card.FreePractice.Title" = "自由練習";
+"Card.FreePractice.Subtitle" = "選擇譜表和音符，開始安靜訓練。";
+"Card.Songs.Subtitle" = "選擇難度並設定譜表。";
+"Card.Levels.Subtitle" = "循序漸進的結構化練習路徑。";
+"Tag.Ledger" = "加線";
+"PracticeLevel.1.Title" = "關卡 1";
+"PracticeLevel.1.Subtitle" = "高音 Do–Ti";
+"PracticeLevel.2.Title" = "關卡 2";
+"PracticeLevel.2.Subtitle" = "高音 Do–Ti + 加線×2";
+"PracticeLevel.3.Title" = "關卡 3";
+"PracticeLevel.3.Subtitle" = "低音 Do–Ti";
+"PracticeLevel.4.Title" = "關卡 4";
+"PracticeLevel.4.Subtitle" = "低音 Do–Ti + 加線×2";
+"PracticeLevel.5.Title" = "關卡 5";
+"PracticeLevel.5.Subtitle" = "高低音 Do–Ti";
+"PracticeLevel.6.Title" = "關卡 6";
+"PracticeLevel.6.Subtitle" = "高低音 Do–Ti + 加線×2";

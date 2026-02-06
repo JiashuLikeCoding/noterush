@@ -133,3 +133,22 @@
 "Tag.Rhythm" = "Rhythm %@";
 "Tag.RhythmMixed" = "Rhythm %@ / Mixed";
 "Tag.Mixed" = "Mixed";
+
+"Title.PracticeBPM" = "Practice %d BPM";
+"Card.FreePractice.Title" = "Free Practice";
+"Card.FreePractice.Subtitle" = "Pick clef and notes for a quiet drill.";
+"Card.Songs.Subtitle" = "Pick a level and shape the clef.";
+"Card.Levels.Subtitle" = "Structured paths for steady growth.";
+"Tag.Ledger" = "Ledger";
+"PracticeLevel.1.Title" = "Level 1";
+"PracticeLevel.1.Subtitle" = "Treble Do-Ti";
+"PracticeLevel.2.Title" = "Level 2";
+"PracticeLevel.2.Subtitle" = "Treble Do-Ti + Ledger x2";
+"PracticeLevel.3.Title" = "Level 3";
+"PracticeLevel.3.Subtitle" = "Bass Do-Ti";
+"PracticeLevel.4.Title" = "Level 4";
+"PracticeLevel.4.Subtitle" = "Bass Do-Ti + Ledger x2";
+"PracticeLevel.5.Title" = "Level 5";
+"PracticeLevel.5.Subtitle" = "Grand Do-Ti";
+"PracticeLevel.6.Title" = "Level 6";
+"PracticeLevel.6.Subtitle" = "Grand Do-Ti + Ledger x2";
