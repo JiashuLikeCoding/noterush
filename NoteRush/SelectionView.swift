@@ -44,6 +44,7 @@ struct SelectionView: View {
     @AppStorage(AppSettingsKeys.useColoredNotes) private var useColoredNotes: Bool = false
     @AppStorage(AppSettingsKeys.noteDisplayRhythmMode) private var noteDisplayRhythmModeRaw: String = NoteDisplayRhythmMode.quarter.rawValue
     @AppStorage(AppSettingsKeys.microphoneInputEnabled) private var microphoneInputEnabled: Bool = false
+    @AppStorage(AppSettingsKeys.midiInputEnabled) private var midiInputEnabled: Bool = false
 
     @State private var songTargetLetters: [UUID: Set<NoteLetter>] = [:]
 
@@ -103,7 +104,8 @@ struct SelectionView: View {
                             useColoredKeys: $useColoredKeys,
                             useColoredNotes: $useColoredNotes,
                             noteDisplayRhythmModeRaw: $noteDisplayRhythmModeRaw,
-                            microphoneInputEnabled: $microphoneInputEnabled
+                            microphoneInputEnabled: $microphoneInputEnabled,
+                            midiInputEnabled: $midiInputEnabled
                         )
                     }
                 }
@@ -468,6 +470,7 @@ struct AppSettingsCard: View {
     @Binding var useColoredNotes: Bool
     @Binding var noteDisplayRhythmModeRaw: String
     @Binding var microphoneInputEnabled: Bool
+    @Binding var midiInputEnabled: Bool
     @State private var showingLanguagePicker: Bool = false
 
     var body: some View {
@@ -495,6 +498,9 @@ struct AppSettingsCard: View {
                 .tint(CuteTheme.accent)
 
             Toggle("Microphone Input", isOn: $microphoneInputEnabled)
+                .tint(CuteTheme.accent)
+
+            Toggle("MIDI Input", isOn: $midiInputEnabled)
                 .tint(CuteTheme.accent)
 
             VStack(alignment: .leading, spacing: 8) {

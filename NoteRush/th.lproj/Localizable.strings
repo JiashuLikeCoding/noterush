@@ -9,6 +9,8 @@
 "Language" = "ภาษา";
 "Microphone Input" = "อินพุตไมโครโฟน";
 
+"MIDI Input" = "อินพุต MIDI";
+
 "Theme" = "ธีม";
 
 "Session Settings" = "การตั้งค่าเซสชัน";
