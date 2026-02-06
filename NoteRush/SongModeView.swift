@@ -310,7 +310,8 @@ struct SongNavigationBar: View {
 
             Spacer()
 
-            Text(isPaused ? "Paused" : "Now Playing")
+            let statusKey: LocalizedStringKey = isPaused ? "Paused" : "Now Playing"
+            Text(statusKey)
                 .font(.system(size: CuteTheme.FontSize.nav, weight: .semibold, design: .rounded))
                 .foregroundColor(CuteTheme.textSecondary)
 
@@ -366,8 +367,12 @@ struct SongHeaderView: View {
                 .tint(CuteTheme.accent)
 
             HStack(spacing: 8) {
-                ZenMetaTag(text: "BPM \(Int(bpm))")
-                ZenMetaTag(text: rhythmLabel)
+                ZenMetaTag {
+                    Text(String(format: NSLocalizedString("Tag.BPM", comment: ""), Int(bpm)))
+                }
+                ZenMetaTag {
+                    Text(String(format: NSLocalizedString("Tag.Rhythm", comment: ""), rhythmLabel))
+                }
             }
         }
         .padding(14)

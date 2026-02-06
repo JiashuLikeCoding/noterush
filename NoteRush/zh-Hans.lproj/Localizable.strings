@@ -124,3 +124,12 @@
 "InputMode.Buttons" = "按键";
 "InputMode.Microphone" = "麦克风";
 "InputMode.MIDI" = "MIDI";
+
+"Selection.Header.SettingsSubtitle" = "塑造你的练习方式。";
+"Selection.Header.SetupSubtitle" = "选择一条路线，安静地开始。";
+"Tag.BPM" = "速度 %d";
+"Tag.DurationSeconds" = "时长 %d秒";
+"Tag.EveryBeats" = "每%@拍";
+"Tag.Rhythm" = "节奏 %@";
+"Tag.RhythmMixed" = "节奏 %@ / 混合";
+"Tag.Mixed" = "混合";

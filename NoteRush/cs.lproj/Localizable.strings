@@ -122,3 +122,12 @@
 "InputMode.Buttons" = "Tlačítka";
 "InputMode.Microphone" = "Mikrofon";
 "InputMode.MIDI" = "MIDI";
+
+"Selection.Header.SettingsSubtitle" = "Shape the way you practice.";
+"Selection.Header.SetupSubtitle" = "Choose a path and begin quietly.";
+"Tag.BPM" = "BPM %d";
+"Tag.DurationSeconds" = "Duration %ds";
+"Tag.EveryBeats" = "Every %@ beat";
+"Tag.Rhythm" = "Rhythm %@";
+"Tag.RhythmMixed" = "Rhythm %@ / Mixed";
+"Tag.Mixed" = "Mixed";

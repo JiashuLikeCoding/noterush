@@ -173,10 +173,15 @@ struct SelectionHeaderView: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(showingSettings ? "Settings" : "Session Setup")
+                let titleKey: LocalizedStringKey = showingSettings ? "Settings" : "Session Setup"
+                Text(titleKey)
                     .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.title))
                     .foregroundColor(CuteTheme.textPrimary)
-                Text(showingSettings ? "Shape the way you practice." : "Choose a path and begin quietly.")
+
+                let subtitleKey: LocalizedStringKey = showingSettings
+                    ? "Selection.Header.SettingsSubtitle"
+                    : "Selection.Header.SetupSubtitle"
+                Text(subtitleKey)
                     .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.caption))
                     .foregroundColor(CuteTheme.textSecondary)
             }
@@ -193,7 +198,7 @@ struct SelectionHeaderView: View {
                             .stroke(CuteTheme.controlBorder, lineWidth: 1)
                     )
             }
-            .accessibilityLabel(showingSettings ? "Close settings" : "Open settings")
+            .accessibilityLabel(showingSettings ? LocalizedStringKey("Close settings") : LocalizedStringKey("Open settings"))
         }
         .padding(.horizontal, 20)
     }
@@ -237,11 +242,15 @@ struct ZenDivider: View {
     }
 }
 
-struct ZenMetaTag: View {
-    let text: String
+struct ZenMetaTag<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
 
     var body: some View {
-        Text(text)
+        content
             .font(.custom("AvenirNext-Regular", size: 11))
             .foregroundColor(CuteTheme.textSecondary)
             .padding(.horizontal, 8)
@@ -808,7 +817,9 @@ struct LevelCardView: View {
                         .foregroundColor(CuteTheme.textSecondary)
                 }
                 Spacer()
-                ZenMetaTag(text: level.rhythm.displayName)
+                ZenMetaTag {
+                    Text(level.rhythm.displayNameKey)
+                }
             }
 
             HStack(spacing: 6) {
@@ -929,20 +940,28 @@ struct SongCardView: View {
 
                 let rhythmText: String = {
                     if template.isFixedMelody {
-                        let rhythmLabel = template.melodyRhythmLabel ?? "Mixed"
-                        let suffix = template.isMixedRhythm ? " / Mixed" : ""
-                        return "Rhythm \(rhythmLabel)\(suffix)"
+                        let rhythmLabel = template.melodyRhythmLabel ?? NSLocalizedString("Tag.Mixed", comment: "")
+                        if template.isMixedRhythm {
+                            return String(format: NSLocalizedString("Tag.RhythmMixed", comment: ""), rhythmLabel)
+                        }
+                        return String(format: NSLocalizedString("Tag.Rhythm", comment: ""), rhythmLabel)
                     }
                     let intervalText: String = template.noteIntervalBeats == floor(template.noteIntervalBeats)
                         ? "\(Int(template.noteIntervalBeats))"
                         : String(format: "%.1f", template.noteIntervalBeats)
-                    return "Every \(intervalText) beat"
+                    return String(format: NSLocalizedString("Tag.EveryBeats", comment: ""), intervalText)
                 }()
 
                 HStack(spacing: 8) {
-                    ZenMetaTag(text: "BPM \(Int(template.bpm))")
-                    ZenMetaTag(text: "Duration \(Int(template.duration))s")
-                    ZenMetaTag(text: rhythmText)
+                    ZenMetaTag {
+                        Text(String(format: NSLocalizedString("Tag.BPM", comment: ""), Int(template.bpm)))
+                    }
+                    ZenMetaTag {
+                        Text(String(format: NSLocalizedString("Tag.DurationSeconds", comment: ""), Int(template.duration)))
+                    }
+                    ZenMetaTag {
+                        Text(rhythmText)
+                    }
                 }
             }
 
