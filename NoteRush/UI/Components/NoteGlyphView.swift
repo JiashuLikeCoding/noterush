@@ -8,6 +8,8 @@ struct NoteGlyphView: View {
     let rhythm: NoteRhythm
     let scale: CGFloat
     let flashCorrect: Bool
+    let flashIncorrect: Bool
+    let judgement: Judgement?
     let yOffset: CGFloat
     let showNoteName: Bool
     let namingMode: NoteNamingMode
@@ -20,6 +22,8 @@ struct NoteGlyphView: View {
         rhythm: NoteRhythm,
         scale: CGFloat = 1.0,
         flashCorrect: Bool = false,
+        flashIncorrect: Bool = false,
+        judgement: Judgement? = nil,
         yOffset: CGFloat = 0,
         showNoteName: Bool = false,
         namingMode: NoteNamingMode = .letters
@@ -31,6 +35,8 @@ struct NoteGlyphView: View {
         self.rhythm = rhythm
         self.scale = scale
         self.flashCorrect = flashCorrect
+        self.flashIncorrect = flashIncorrect
+        self.judgement = judgement
         self.yOffset = yOffset
         self.showNoteName = showNoteName
         self.namingMode = namingMode
@@ -53,6 +59,11 @@ struct NoteGlyphView: View {
 
         let ledgerIndices = metrics.ledgerLineIndices(for: note.index)
         let showLineThroughHead = metrics.staffLineIndices.contains(note.index) || note.isLedgerLine
+
+        let judgedCorrect = judgement == .perfect
+        let judgedWrong = judgement == .miss
+        let shouldShowJudgementRing = flashCorrect || flashIncorrect || judgedCorrect || judgedWrong
+        let judgementColor: Color = (flashCorrect || judgedCorrect) ? CuteTheme.judgementCorrect : CuteTheme.judgementWrong
 
         ZStack {
             ForEach(ledgerIndices, id: \.self) { ledgerIndex in
@@ -95,16 +106,16 @@ struct NoteGlyphView: View {
             }
 
             Ellipse()
-                .stroke(Color.green, lineWidth: 3)
+                .stroke(judgementColor, lineWidth: 3)
                 .frame(width: headWidth * 1.1, height: headHeight * 1.1)
                 .rotationEffect(headRotation)
-                .opacity(flashCorrect ? 0.9 : 0)
-                .animation(.easeOut(duration: 0.2), value: flashCorrect)
+                .opacity(shouldShowJudgementRing ? 0.9 : 0)
+                .animation(.easeOut(duration: 0.2), value: shouldShowJudgementRing)
 
             if showNoteName {
                 Text(note.letter.displayName(for: namingMode))
                     .font(.system(size: headHeight * 0.9, weight: .bold, design: .rounded))
-                    .foregroundColor(color)
+                    .foregroundColor(shouldShowJudgementRing ? judgementColor : color)
                     .offset(x: headWidth * 1.4)
             }
         }

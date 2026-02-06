@@ -559,6 +559,7 @@ final class PracticeViewModel: ObservableObject {
     @Published var totalAnswered: Int
     @Published var totalCorrect: Int
     @Published var flashCorrect: Bool
+    @Published var flashIncorrect: Bool
     @Published var shakeTrigger: Int
 
     private var generator = QuestionGenerator()
@@ -575,6 +576,7 @@ final class PracticeViewModel: ObservableObject {
         totalAnswered = 0
         totalCorrect = 0
         flashCorrect = false
+        flashIncorrect = false
         shakeTrigger = 0
     }
 
@@ -644,6 +646,10 @@ final class PracticeViewModel: ObservableObject {
     }
 
     private func triggerIncorrectFeedback() {
+        flashIncorrect = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { [weak self] in
+            self?.flashIncorrect = false
+        }
         shakeTrigger += 1
     }
 }

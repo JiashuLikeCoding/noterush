@@ -36,6 +36,7 @@ struct PracticeView: View {
             StaffView(
                 note: viewModel.currentNote,
                 flashCorrect: viewModel.flashCorrect,
+                flashIncorrect: viewModel.flashIncorrect,
                 shakeTrigger: viewModel.shakeTrigger,
                 rhythm: displayRhythm,
                 clefMode: staffClefMode,

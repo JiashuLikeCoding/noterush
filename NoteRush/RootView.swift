@@ -254,6 +254,7 @@ struct EntryView: View {
                 StaffView(
                     note: previewNote,
                     flashCorrect: false,
+                    flashIncorrect: false,
                     shakeTrigger: 0,
                     rhythm: previewRhythm,
                     clefMode: StaffClefMode(rawValue: staffClefModeRaw) ?? .treble,

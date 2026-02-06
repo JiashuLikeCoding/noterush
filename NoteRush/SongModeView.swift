@@ -615,9 +615,9 @@ struct JudgementPulseView: View {
     private func color(for judgement: Judgement?) -> Color {
         switch judgement {
         case .perfect:
-            return CuteTheme.feedbackSuccess
+            return CuteTheme.judgementCorrect
         case .miss:
-            return CuteTheme.feedbackMiss
+            return CuteTheme.judgementWrong
         case .none:
             return .clear
         }
