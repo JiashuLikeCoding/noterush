@@ -2,6 +2,8 @@ import SwiftUI
 
 struct AppSettingsSheetView: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var themeRefreshToken: UUID = UUID()
+
     @AppStorage(AppSettingsKeys.soundEffectsEnabled) private var soundEnabled: Bool = true
     @AppStorage(AppSettingsKeys.showCorrectHint) private var showCorrectHint: Bool = false
     @AppStorage(AppSettingsKeys.appLanguage) private var appLanguageRaw: String = AppLanguage.system.rawValue
@@ -35,8 +37,13 @@ struct AppSettingsSheetView: View {
                 .padding(16)
             }
             // Refresh the sheet immediately when theme changes, without dismissing it.
-            .id(appThemeRaw)
+            .id(themeRefreshToken)
             .background(CuteTheme.backgroundTop.opacity(0.12))
+            .onChange(of: appThemeRaw) { newValue in
+                // Ensure the theme is persisted immediately (and trigger a view refresh).
+                UserDefaults.standard.set(newValue, forKey: AppSettingsKeys.appTheme)
+                themeRefreshToken = UUID()
+            }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
