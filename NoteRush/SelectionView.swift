@@ -823,9 +823,9 @@ struct LevelCardView: View {
             }
 
             HStack(spacing: 6) {
-                ForEach(level.rangeTags, id: \.self) { tag in
+                ForEach(level.rangeTags.indices, id: \.self) { idx in
                     NoteChipView(
-                        title: LocalizedStringKey(tag),
+                        title: level.rangeTags[idx],
                         isSelected: false,
                         isDimmed: true
                     )
@@ -938,29 +938,31 @@ struct SongCardView: View {
                     .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.body))
                     .foregroundColor(CuteTheme.textPrimary)
 
-                let rhythmText: String = {
-                    if template.isFixedMelody {
-                        let rhythmLabel = template.melodyRhythmLabel ?? NSLocalizedString("Tag.Mixed", comment: "")
-                        if template.isMixedRhythm {
-                            return String(format: NSLocalizedString("Tag.RhythmMixed", comment: ""), rhythmLabel)
-                        }
-                        return String(format: NSLocalizedString("Tag.Rhythm", comment: ""), rhythmLabel)
-                    }
-                    let intervalText: String = template.noteIntervalBeats == floor(template.noteIntervalBeats)
-                        ? "\(Int(template.noteIntervalBeats))"
-                        : String(format: "%.1f", template.noteIntervalBeats)
-                    return String(format: NSLocalizedString("Tag.EveryBeats", comment: ""), intervalText)
-                }()
-
                 HStack(spacing: 8) {
                     ZenMetaTag {
-                        Text(String(format: NSLocalizedString("Tag.BPM", comment: ""), Int(template.bpm)))
+                        Text("Tag.BPM \(Int(template.bpm))")
                     }
                     ZenMetaTag {
-                        Text(String(format: NSLocalizedString("Tag.DurationSeconds", comment: ""), Int(template.duration)))
+                        Text("Tag.DurationSeconds \(Int(template.duration))")
                     }
-                    ZenMetaTag {
-                        Text(rhythmText)
+
+                    if template.isFixedMelody {
+                        // Rhythm <value> / Mixed
+                        let rhythmKey = template.melody?.first?.rhythm.displayNameKey ?? "Tag.Mixed"
+                        ZenMetaTag {
+                            if template.isMixedRhythm {
+                                Text("Tag.Rhythm") + Text(" ") + Text(rhythmKey) + Text(" / ") + Text("Tag.Mixed")
+                            } else {
+                                Text("Tag.Rhythm") + Text(" ") + Text(rhythmKey)
+                            }
+                        }
+                    } else {
+                        let intervalText: String = template.noteIntervalBeats == floor(template.noteIntervalBeats)
+                            ? "\(Int(template.noteIntervalBeats))"
+                            : String(format: "%.1f", template.noteIntervalBeats)
+                        ZenMetaTag {
+                            Text("Tag.EveryBeats \(intervalText)")
+                        }
                     }
                 }
             }

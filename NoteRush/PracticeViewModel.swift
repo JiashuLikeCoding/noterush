@@ -262,32 +262,23 @@ enum StaffClefMode: String, CaseIterable, Identifiable {
 
 struct PracticeLevel: Identifiable, Equatable {
     let id: Int
-    let title: String
-    let subtitle: String
+    let titleKey: LocalizedStringKey
+    let subtitleKey: LocalizedStringKey
     let letters: Set<NoteLetter>
     let indexRange: ClosedRange<Int>
-    /// Keys for display chips (e.g. Clef.Treble, Tag.Ledger)
-    let rangeTags: [String]
+    let rangeTags: [LocalizedStringKey]
     let rhythm: NoteRhythm
     let clefMode: StaffClefMode
     let trebleRange: ClosedRange<Int>?
     let bassRange: ClosedRange<Int>?
-
-    var titleKey: LocalizedStringKey {
-        LocalizedStringKey("PracticeLevel.\(id).Title")
-    }
-
-    var subtitleKey: LocalizedStringKey {
-        LocalizedStringKey("PracticeLevel.\(id).Subtitle")
-    }
 }
 
 extension PracticeLevel {
     static let library: [PracticeLevel] = [
         PracticeLevel(
             id: 1,
-            title: "Level 1",
-            subtitle: "Treble Do-Ti",
+            titleKey: "PracticeLevel.1.Title",
+            subtitleKey: "PracticeLevel.1.Subtitle",
             letters: Set(NoteLetter.allCases),
             indexRange: 2...8,
             rangeTags: ["Clef.Treble"],
@@ -298,8 +289,8 @@ extension PracticeLevel {
         ),
         PracticeLevel(
             id: 2,
-            title: "Level 2",
-            subtitle: "Treble Do-Ti + Ledger x2",
+            titleKey: "PracticeLevel.2.Title",
+            subtitleKey: "PracticeLevel.2.Subtitle",
             letters: Set(NoteLetter.allCases),
             indexRange: 0...16,
             rangeTags: ["Clef.Treble", "Tag.Ledger"],
@@ -310,8 +301,8 @@ extension PracticeLevel {
         ),
         PracticeLevel(
             id: 3,
-            title: "Level 3",
-            subtitle: "Bass Do-Ti",
+            titleKey: "PracticeLevel.3.Title",
+            subtitleKey: "PracticeLevel.3.Subtitle",
             letters: Set(NoteLetter.allCases),
             indexRange: 7...13,
             rangeTags: ["Clef.Bass"],
@@ -322,8 +313,8 @@ extension PracticeLevel {
         ),
         PracticeLevel(
             id: 4,
-            title: "Level 4",
-            subtitle: "Bass Do-Ti + Ledger x2",
+            titleKey: "PracticeLevel.4.Title",
+            subtitleKey: "PracticeLevel.4.Subtitle",
             letters: Set(NoteLetter.allCases),
             indexRange: 0...16,
             rangeTags: ["Clef.Bass", "Tag.Ledger"],
@@ -334,8 +325,8 @@ extension PracticeLevel {
         ),
         PracticeLevel(
             id: 5,
-            title: "Level 5",
-            subtitle: "Grand Do-Ti",
+            titleKey: "PracticeLevel.5.Title",
+            subtitleKey: "PracticeLevel.5.Subtitle",
             letters: Set(NoteLetter.allCases),
             indexRange: 2...8,
             rangeTags: ["Clef.Treble", "Clef.Bass"],
@@ -346,8 +337,8 @@ extension PracticeLevel {
         ),
         PracticeLevel(
             id: 6,
-            title: "Level 6",
-            subtitle: "Grand Do-Ti + Ledger x2",
+            titleKey: "PracticeLevel.6.Title",
+            subtitleKey: "PracticeLevel.6.Subtitle",
             letters: Set(NoteLetter.allCases),
             indexRange: 0...16,
             rangeTags: ["Clef.Treble", "Clef.Bass", "Tag.Ledger"],

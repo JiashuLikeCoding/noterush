@@ -368,10 +368,10 @@ struct SongHeaderView: View {
 
             HStack(spacing: 8) {
                 ZenMetaTag {
-                    Text(String(format: NSLocalizedString("Tag.BPM", comment: ""), Int(bpm)))
+                    Text("Tag.BPM \(Int(bpm))")
                 }
                 ZenMetaTag {
-                    Text(String(format: NSLocalizedString("Tag.Rhythm", comment: ""), rhythmLabel))
+                    Text("Tag.Rhythm") + Text(" ") + Text(verbatim: rhythmLabel)
                 }
             }
         }
