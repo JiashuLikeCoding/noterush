@@ -6,6 +6,7 @@ enum AppSettingsKeys {
     static let showCorrectHint = "showCorrectHint"
     static let appLanguage = "appLanguage"
     static let appTheme = "appTheme"
+    static let appearanceMode = "appearanceMode"
     static let staffClefMode = "staffClefMode"
     static let showNoteName = "showNoteName"
     static let showJudgementNoteName = "showJudgementNoteName"
@@ -30,6 +31,30 @@ enum InputMode: String, CaseIterable, Identifiable {
         case .buttons: return "InputMode.Buttons"
         case .microphone: return "InputMode.Microphone"
         case .midi: return "InputMode.MIDI"
+        }
+    }
+}
+
+enum AppearanceMode: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var titleKey: LocalizedStringKey {
+        switch self {
+        case .system: return "AppearanceMode.System"
+        case .light: return "AppearanceMode.Light"
+        case .dark: return "AppearanceMode.Dark"
+        }
+    }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
         }
     }
 }

@@ -40,6 +40,7 @@ struct SelectionView: View {
     @AppStorage(AppSettingsKeys.showCorrectHint) private var showCorrectHint: Bool = false
     @AppStorage(AppSettingsKeys.appLanguage) private var appLanguageRaw: String = AppLanguage.system.rawValue
     @AppStorage(AppSettingsKeys.appTheme) private var appThemeRaw: String = AppTheme.zen.rawValue
+    @AppStorage(AppSettingsKeys.appearanceMode) private var appearanceModeRaw: String = AppearanceMode.system.rawValue
     @AppStorage(AppSettingsKeys.staffClefMode) private var staffClefModeRaw: String = StaffClefMode.treble.rawValue
     @AppStorage(AppSettingsKeys.showNoteName) private var showNoteName: Bool = false
     @AppStorage(AppSettingsKeys.showJudgementNoteName) private var showJudgementNoteName: Bool = false
@@ -104,6 +105,7 @@ struct SelectionView: View {
                             showCorrectHint: $showCorrectHint,
                             appLanguageRaw: $appLanguageRaw,
                             appThemeRaw: $appThemeRaw,
+                            appearanceModeRaw: $appearanceModeRaw,
                             showNoteName: $showNoteName,
                             showJudgementNoteName: $showJudgementNoteName,
                             useColoredKeys: $useColoredKeys,
@@ -474,6 +476,7 @@ struct AppSettingsCard: View {
     @Binding var showCorrectHint: Bool
     @Binding var appLanguageRaw: String
     @Binding var appThemeRaw: String
+    @Binding var appearanceModeRaw: String
     @Binding var showNoteName: Bool
     @Binding var showJudgementNoteName: Bool
     @Binding var useColoredKeys: Bool
@@ -485,10 +488,13 @@ struct AppSettingsCard: View {
     @State private var showingLanguagePicker: Bool = false
 
     var body: some View {
+        @Environment(\.colorScheme) var colorScheme
         // IMPORTANT: CuteTheme reads from UserDefaults. In SwiftUI, changing @AppStorage
         // can update only the subview that uses that binding. We want the whole settings card
         // to repaint immediately when appThemeRaw changes, so we derive a palette from it here.
-        let palette = (AppTheme(rawValue: appThemeRaw) ?? .zen).palette
+        // Also use darkPalette when in dark mode.
+        let theme = AppTheme(rawValue: appThemeRaw) ?? .zen
+        let palette = (colorScheme == .dark) ? theme.darkPalette : theme.palette
 
         VStack(alignment: .leading, spacing: 12) {
             Text("App Settings")
@@ -552,6 +558,31 @@ struct AppSettingsCard: View {
                     .foregroundColor(palette.textSecondary)
 
                 ThemePicker(selectedRaw: $appThemeRaw)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Appearance")
+                    .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.body))
+                    .foregroundColor(palette.textSecondary)
+
+                let appearanceBinding = Binding<AppearanceMode>(
+                    get: { AppearanceMode(rawValue: appearanceModeRaw) ?? .system },
+                    set: { appearanceModeRaw = $0.rawValue }
+                )
+
+                HStack(spacing: 8) {
+                    ForEach(AppearanceMode.allCases) { mode in
+                        Button(action: { appearanceBinding.wrappedValue = mode }) {
+                            Text(mode.titleKey)
+                                .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.caption))
+                                .foregroundColor(appearanceBinding.wrappedValue == mode ? .white : palette.textPrimary)
+                                .frame(maxWidth: .infinity, minHeight: 32)
+                                .background(appearanceBinding.wrappedValue == mode ? palette.accent : palette.controlFill)
+                                .cornerRadius(10)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
 
             VStack(alignment: .leading, spacing: 8) {
