@@ -445,39 +445,28 @@ struct ThemeSwatch: View {
     var body: some View {
         let palette = theme.palette
 
-        VStack(spacing: 6) {
-            ZStack(alignment: .bottomLeading) {
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [palette.backgroundTop, palette.backgroundBottom]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(isSelected ? palette.accent : palette.cardBorder, lineWidth: isSelected ? 2 : 1)
-
-                HStack(spacing: 6) {
+        VStack(spacing: 8) {
+            Circle()
+                .fill(palette.accent)
+                .frame(width: 44, height: 44)
+                .overlay(
                     Circle()
-                        .fill(palette.accent)
-                        .frame(width: 10, height: 10)
-                    Circle()
-                        .fill(palette.lowAccent)
-                        .frame(width: 8, height: 8)
-                    Circle()
-                        .fill(palette.highAccent)
-                        .frame(width: 8, height: 8)
-                }
-                .padding(8)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 60)
+                        .stroke(isSelected ? palette.accent : palette.cardBorder, lineWidth: isSelected ? 3 : 1)
+                )
+                .shadow(color: Color.black.opacity(0.10), radius: 6, x: 0, y: 4)
 
             Text(theme.displayName)
                 .font(.custom("AvenirNext-DemiBold", size: 11))
                 .foregroundColor(CuteTheme.textPrimary)
         }
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity)
+        .background(CuteTheme.cardBackground)
+        .cornerRadius(14)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(isSelected ? palette.accent.opacity(0.25) : CuteTheme.cardBorder, lineWidth: 1)
+        )
     }
 }
 
