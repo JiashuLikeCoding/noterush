@@ -895,7 +895,7 @@ struct PianoKeyboardInputView: View {
                                 ZStack {
                                     // White key surface
                                     RoundedRectangle(cornerRadius: 10)
-                                        .fill(useColoredKeys ? CuteTheme.noteColor(for: letter).opacity(0.32) : Color.white)
+                                        .fill(useColoredKeys ? CuteTheme.noteColor(for: letter) : Color.white)
 
                                     // (no solid separators; use gaps + border)
 
