@@ -13,8 +13,17 @@ struct RootView: View {
     @AppStorage(AppSettingsKeys.freePracticeClefMode) private var freePracticeClefModeRaw: String = StaffClefMode.treble.rawValue
     @State private var step: Step = .entry
     @State private var bpm: Double = 80
-    @State private var namingMode: NoteNamingMode = .letters
+    @AppStorage(AppSettingsKeys.noteNamingMode) private var namingModeRaw: String = NoteNamingMode.letters.rawValue
     @State private var rhythm: NoteRhythm = PracticeLevel.library.first?.rhythm ?? .quarter
+
+    private var namingMode: NoteNamingMode {
+        get { NoteNamingMode(rawValue: namingModeRaw) ?? .letters }
+        nonmutating set { namingModeRaw = newValue.rawValue }
+    }
+
+    private var namingModeBinding: Binding<NoteNamingMode> {
+        Binding(get: { self.namingMode }, set: { self.namingMode = $0 })
+    }
     @State private var selectedLetters: Set<NoteLetter> = PracticeLevel.library.first?.letters ?? []
     @State private var selectedLevel: PracticeLevel? = PracticeLevel.library.first
     @State private var selectedSong: SongTemplate?
@@ -33,6 +42,9 @@ struct RootView: View {
                 // Jason request: default everything to treble clef.
                 staffClefModeRaw = StaffClefMode.treble.rawValue
                 freePracticeClefModeRaw = StaffClefMode.treble.rawValue
+
+                // Prewarm piano engine to avoid first-tap hitch.
+                PianoSoundEngine.shared.prewarm()
             }
     }
 
@@ -83,7 +95,7 @@ struct RootView: View {
         case .selection:
             SelectionView(
                 bpm: $bpm,
-                namingMode: $namingMode,
+                namingMode: namingModeBinding,
                 rhythm: $rhythm,
                 selectedLetters: $selectedLetters,
                 selectedLevel: $selectedLevel,
@@ -189,7 +201,7 @@ struct RootView: View {
 
                 SongModeView(
                     song: song,
-                    namingMode: $namingMode,
+                    namingMode: namingModeBinding,
                     clefMode: activeClefMode,
                     onChangeClef: onChangeClef,
                     onExit: {

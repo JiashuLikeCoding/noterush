@@ -13,6 +13,7 @@ enum AppSettingsKeys {
     static let useColoredKeys = "useColoredKeys"
     static let useColoredNotes = "useColoredNotes"
     static let noteDisplayRhythmMode = "noteDisplayRhythmMode"
+    static let noteNamingMode = "noteNamingMode"
     static let microphoneInputEnabled = "microphoneInputEnabled" // legacy
     static let midiInputEnabled = "midiInputEnabled" // legacy
     static let inputMode = "inputMode"

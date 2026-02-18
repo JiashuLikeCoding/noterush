@@ -44,14 +44,15 @@ enum CuteTheme {
     static var staffLineColor: Color { palette.staffLineColor }
 
     enum FontSize {
-        static let titleXL: CGFloat = 32
-        static let title: CGFloat = 20
-        static let section: CGFloat = 16
-        static let body: CGFloat = 14
-        static let caption: CGFloat = 12
-        static let button: CGFloat = 18
-        static let buttonSmall: CGFloat = 12
-        static let nav: CGFloat = 14
+        // One step smaller across the app (Jason request)
+        static let titleXL: CGFloat = 30
+        static let title: CGFloat = 18
+        static let section: CGFloat = 15
+        static let body: CGFloat = 13
+        static let caption: CGFloat = 11
+        static let button: CGFloat = 16
+        static let buttonSmall: CGFloat = 11
+        static let nav: CGFloat = 13
     }
 
     static func noteColor(for letter: NoteLetter) -> Color {

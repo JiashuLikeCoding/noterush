@@ -1,6 +1,15 @@
 import SwiftUI
 
 struct SongModeView: View {
+    private struct HeightKey: PreferenceKey {
+        static var defaultValue: CGFloat = 0
+        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+            value = nextValue()
+        }
+    }
+
+    @State private var topContentHeight: CGFloat = 0
+    @State private var stableKeyboardHeight: CGFloat = 260
     @StateObject private var viewModel: SongViewModel
     @StateObject private var micDetector = MicrophonePitchDetector()
     @StateObject private var midiDetector = MidiNoteDetector()
@@ -21,8 +30,9 @@ struct SongModeView: View {
         return InputMode(rawValue: inputModeRaw) ?? .buttons
     }
 
-    private var microphoneInputEnabled: Bool { inputMode == .microphone }
-    private var midiInputEnabled: Bool { inputMode == .midi }
+    // Jason decision: keep app in button-only input mode.
+    private var microphoneInputEnabled: Bool { false }
+    private var midiInputEnabled: Bool { false }
     private let clefModeOverride: StaffClefMode?
 
     private var staffClefMode: StaffClefMode {
@@ -54,7 +64,7 @@ struct SongModeView: View {
     var body: some View {
         GeometryReader { proxy in
             let isLandscape = proxy.size.width > proxy.size.height
-            let contentPadding: CGFloat = isLandscape ? 10 : 8
+            let contentPadding: CGFloat = isLandscape ? 8 : 6
             let usesGrandStaff = staffClefMode == .grand
             let staffHeight = min(
                 proxy.size.height * (usesGrandStaff ? (isLandscape ? 0.5 : 0.6) : (isLandscape ? 0.38 : 0.45)),
@@ -62,36 +72,43 @@ struct SongModeView: View {
             )
             let noteScale = CGFloat(viewModel.noteScale) * (isLandscape ? 0.95 : 0.85)
 
-            ZStack {
-                VStack(spacing: 10) {
-                    SongNavigationBar(
-                        isPaused: viewModel.isPaused,
-                        onBack: onExit,
-                        onTogglePause: {
-                            viewModel.togglePause()
-                        },
-                        onOpenSettings: {
-                            showSettings = true
-                        }
-                    )
+            let bottomGap = proxy.safeAreaInsets.bottom + 34
 
-                    if isLandscape {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                SongHeaderView(
-                                    title: viewModel.song.title,
-                                    bpm: viewModel.bpm,
-                                    rhythmLabel: viewModel.song.rhythmLabel,
-                                    progress: viewModel.progress
-                                )
+            let remaining = proxy.size.height
+                - contentPadding * 2
+                - topContentHeight
+                - 10
+                - staffHeight
+                - 10
+                - bottomGap
+
+            let proposedKeyboardHeight = min(260, max(220, remaining))
+
+            ZStack {
+                VStack(spacing: 6) {
+                    VStack(spacing: 6) {
+                        SongNavigationBar(
+                            isPaused: viewModel.isPaused,
+                            onBack: onExit,
+                            onTogglePause: {
+                                viewModel.togglePause()
+                            },
+                            onOpenSettings: {
+                                showSettings = true
+                            }
+                        )
+
+                        // Merge all top controls into ONE compact card (方案 A).
+                        ControlCard(padding: 8) {
+                            VStack(spacing: 6) {
+                                // ui rev marker removed
+                                // header removed
 
                                 BpmControlView(bpm: $bpmDraft, onCommit: { value in
                                     viewModel.restart(withBpm: value)
                                 })
 
-                                ControlCard {
-                                    NamingModePicker(namingMode: $namingMode)
-                                }
+                                NamingModePicker(namingMode: $namingMode)
 
                                 if let onChangeClef {
                                     PracticeClefPicker(
@@ -105,33 +122,13 @@ struct SongModeView: View {
                                 }
                             }
                         }
-                    } else {
-                        SongHeaderView(
-                            title: viewModel.song.title,
-                            bpm: viewModel.bpm,
-                            rhythmLabel: viewModel.song.rhythmLabel,
-                            progress: viewModel.progress
-                        )
-
-                        BpmControlView(bpm: $bpmDraft, onCommit: { value in
-                            viewModel.restart(withBpm: value)
-                        })
-
-                        ControlCard {
-                            NamingModePicker(namingMode: $namingMode)
-                        }
-
-                        if let onChangeClef {
-                            PracticeClefPicker(
-                                selectedMode: staffClefMode,
-                                onSelect: { mode in
-                                    if mode != staffClefMode {
-                                        onChangeClef(mode, viewModel.bpm)
-                                    }
-                                }
-                            )
-                        }
                     }
+                    .background(
+                        GeometryReader { p in
+                            Color.clear
+                                .preference(key: HeightKey.self, value: p.size.height)
+                        }
+                    )
 
                     ScrollingStaffView(
                         events: viewModel.events,
@@ -154,29 +151,39 @@ struct SongModeView: View {
                     .padding(.horizontal, 6)
                     .cuteCard()
 
-                    AnswerGridView(mode: namingMode, useColoredKeys: useColoredKeys) { letter in
+                    PianoKeyboardInputView(namingMode: namingMode, useColoredKeys: useColoredKeys) { letter in
                         guard !microphoneInputEnabled else { return }
-                        InputFeedbackManager.noteButtonTapped(letter: letter, referenceNote: viewModel.currentTargetNote)
+                        InputFeedbackManager.noteButtonTapped(letter: letter, referenceNote: viewModel.soundAnchorNote)
                         viewModel.select(letter: letter)
                     }
+                    .frame(height: stableKeyboardHeight)
                     .disabled(viewModel.isFinished || viewModel.isPaused || microphoneInputEnabled)
                     .opacity(microphoneInputEnabled ? 0.5 : 1)
 
-                    GeometryReader { proxy in
-                        let diameter = max(0, proxy.size.height + 12)
-                        JudgementPulseView(
-                            judgement: viewModel.lastJudgement,
-                            currentTime: viewModel.currentTime,
-                            lastJudgementTime: viewModel.lastJudgementTime,
-                            showNoteName: showJudgementNoteName,
-                            noteName: viewModel.lastJudgementLetter?.displayName(for: namingMode),
-                            diameter: diameter
-                        )
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
+                    Spacer(minLength: bottomGap)
+
+                    // Keep judgement halo from stealing keyboard space.
+                    JudgementPulseView(
+                        judgement: viewModel.lastJudgement,
+                        currentTime: viewModel.currentTime,
+                        lastJudgementTime: viewModel.lastJudgementTime,
+                        showNoteName: showJudgementNoteName,
+                        noteName: viewModel.lastJudgementLetter?.displayName(for: namingMode),
+                        diameter: 0
+                    )
+                    .frame(height: 0)
+                    .opacity(0)
                 }
                 .padding(contentPadding)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .onPreferenceChange(HeightKey.self) { newValue in
+                    if abs(newValue - topContentHeight) > 1 {
+                        topContentHeight = newValue
+                    }
+                }
+                .onAppear { stableKeyboardHeight = proposedKeyboardHeight }
+                .onChange(of: proxy.size) { _ in stableKeyboardHeight = proposedKeyboardHeight }
+                .onChange(of: topContentHeight) { _ in stableKeyboardHeight = proposedKeyboardHeight }
                 .onAppear {
                     viewModel.start()
                     bpmDraft = viewModel.bpm
@@ -269,15 +276,17 @@ struct SongModeView: View {
 }
 
 struct ControlCard<Content: View>: View {
+    let padding: CGFloat
     let content: Content
 
-    init(@ViewBuilder content: () -> Content) {
+    init(padding: CGFloat = 10, @ViewBuilder content: () -> Content) {
+        self.padding = padding
         self.content = content()
     }
 
     var body: some View {
         content
-            .padding(10)
+            .padding(padding)
             .background(CuteTheme.cardBackground)
             .cornerRadius(14)
             .overlay(
@@ -294,33 +303,11 @@ struct SongNavigationBar: View {
     let onOpenSettings: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            Button(action: onBack) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 16, weight: .semibold))
-                    .frame(width: 36, height: 36)
-                    .background(CuteTheme.controlFill)
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(CuteTheme.cardBorder, lineWidth: 1)
-                    )
-            }
-            .foregroundColor(CuteTheme.textPrimary)
-
-            Spacer()
-
-            let statusKey: LocalizedStringKey = isPaused ? "Paused" : "Now Playing"
-            Text(statusKey)
-                .font(.system(size: CuteTheme.FontSize.nav, weight: .semibold, design: .rounded))
-                .foregroundColor(CuteTheme.textSecondary)
-
-            Spacer()
-
-            HStack(spacing: 8) {
-                Button(action: onOpenSettings) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 14, weight: .semibold))
+        ZStack {
+            HStack(spacing: 12) {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
                         .frame(width: 36, height: 36)
                         .background(CuteTheme.controlFill)
                         .cornerRadius(12)
@@ -331,19 +318,42 @@ struct SongNavigationBar: View {
                 }
                 .foregroundColor(CuteTheme.textPrimary)
 
-                Button(action: onTogglePause) {
-                    Image(systemName: isPaused ? "play.fill" : "pause.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .frame(width: 36, height: 36)
-                        .background(CuteTheme.controlFill)
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(CuteTheme.cardBorder, lineWidth: 1)
-                        )
+                Spacer()
+
+                HStack(spacing: 8) {
+                    Button(action: onOpenSettings) {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .frame(width: 36, height: 36)
+                            .background(CuteTheme.controlFill)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(CuteTheme.cardBorder, lineWidth: 1)
+                            )
+                    }
+                    .foregroundColor(CuteTheme.textPrimary)
+
+                    Button(action: onTogglePause) {
+                        Image(systemName: isPaused ? "play.fill" : "pause.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .frame(width: 36, height: 36)
+                            .background(CuteTheme.controlFill)
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(CuteTheme.cardBorder, lineWidth: 1)
+                            )
+                    }
+                    .foregroundColor(CuteTheme.textPrimary)
                 }
-                .foregroundColor(CuteTheme.textPrimary)
             }
+
+            let statusKey: LocalizedStringKey = isPaused ? "Paused" : "Practice"
+            Text(statusKey == "Practice" ? "PRACTICE" : statusKey)
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundColor(CuteTheme.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
     }
 }
@@ -355,33 +365,23 @@ struct SongHeaderView: View {
     let progress: Double
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(title)
-                    .font(.system(size: CuteTheme.FontSize.title, weight: .bold, design: .rounded))
+                    .font(.system(size: CuteTheme.FontSize.section, weight: .bold, design: .rounded))
                     .foregroundColor(CuteTheme.textPrimary)
-                Spacer()
+
+                Spacer(minLength: 8)
+
+                Text("\(Int(bpm)) BPM")
+                    .font(.system(size: CuteTheme.FontSize.caption, weight: .semibold, design: .rounded))
+                    .foregroundColor(CuteTheme.textSecondary)
             }
 
             ProgressView(value: progress)
                 .tint(CuteTheme.accent)
-
-            HStack(spacing: 8) {
-                ZenMetaTag {
-                    Text("Tag.BPM \(Int(bpm))")
-                }
-                ZenMetaTag {
-                    Text("Tag.Rhythm") + Text(" ") + Text(verbatim: rhythmLabel)
-                }
-            }
         }
-        .padding(14)
-        .background(CuteTheme.cardBackground)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(CuteTheme.cardBorder, lineWidth: 1)
-        )
+        // No inner card here. The parent ControlCard already provides the container.
     }
 }
 
@@ -446,19 +446,23 @@ struct NamingModePicker: View {
     @Binding var namingMode: NoteNamingMode
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 28) {
             ForEach(NoteNamingMode.allCases) { mode in
                 Button(action: { namingMode = mode }) {
-                    VStack(spacing: 6) {
+                    VStack(spacing: 8) {
                         Text(mode.segmentTitle)
                             .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.body))
                             .foregroundColor(namingMode == mode ? CuteTheme.textPrimary : CuteTheme.textSecondary)
+                            .frame(maxWidth: .infinity)
+
+                        // Long underline like the reference screenshot
                         Rectangle()
                             .fill(namingMode == mode ? CuteTheme.accent : Color.clear)
-                            .frame(height: 2)
-                            .cornerRadius(1)
+                            .frame(height: 3)
+                            .cornerRadius(2)
+                            .padding(.horizontal, 6)
                     }
-                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
                 }
                 .buttonStyle(.plain)
             }

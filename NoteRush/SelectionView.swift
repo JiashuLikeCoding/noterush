@@ -4,6 +4,7 @@ enum SelectionTab: String, CaseIterable, Identifiable {
     case practiceNotes
     case songs
     case levels
+    case earTraining
 
     var id: String { rawValue }
 
@@ -15,6 +16,8 @@ enum SelectionTab: String, CaseIterable, Identifiable {
             return "Tab.Songs"
         case .levels:
             return "Tab.Levels"
+        case .earTraining:
+            return "Tab.EarTraining"
         }
     }
 }
@@ -96,6 +99,8 @@ struct SelectionView: View {
                                     onStartPractice()
                                 }
                             )
+                        case .earTraining:
+                            EarTrainingSelectionCard(namingMode: $namingMode)
                         }
                     } else {
                         AppSettingsCard(

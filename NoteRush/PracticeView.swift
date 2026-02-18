@@ -4,18 +4,30 @@ struct PracticeView: View {
     @StateObject private var viewModel = PracticeViewModel()
     @StateObject private var micDetector = MicrophonePitchDetector()
     @StateObject private var midiDetector = MidiNoteDetector()
+
+    private struct HeightKey: PreferenceKey {
+        static var defaultValue: CGFloat = 0
+        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+            value = nextValue()
+        }
+    }
+
+    @State private var topContentHeight: CGFloat = 0
+    @State private var stableKeyboardHeight: CGFloat = 260
     @AppStorage(AppSettingsKeys.staffClefMode) private var staffClefModeRaw: String = StaffClefMode.treble.rawValue
     @AppStorage(AppSettingsKeys.useColoredKeys) private var useColoredKeys: Bool = true
     @AppStorage(AppSettingsKeys.useColoredNotes) private var useColoredNotes: Bool = false
     @AppStorage(AppSettingsKeys.noteDisplayRhythmMode) private var noteDisplayRhythmModeRaw: String = NoteDisplayRhythmMode.quarter.rawValue
+    @AppStorage(AppSettingsKeys.noteNamingMode) private var namingModeRaw: String = NoteNamingMode.letters.rawValue
     @AppStorage(AppSettingsKeys.inputMode) private var inputModeRaw: String = InputMode.buttons.rawValue
 
     private var inputMode: InputMode {
         return InputMode(rawValue: inputModeRaw) ?? .buttons
     }
 
-    private var microphoneInputEnabled: Bool { inputMode == .microphone }
-    private var midiInputEnabled: Bool { inputMode == .midi }
+    // Jason decision: keep app in button-only input mode.
+    private var microphoneInputEnabled: Bool { false }
+    private var midiInputEnabled: Bool { false }
 
     private var staffClefMode: StaffClefMode {
         return StaffClefMode(rawValue: staffClefModeRaw) ?? .treble
@@ -26,36 +38,117 @@ struct PracticeView: View {
         return mode.resolvedRhythm(seed: viewModel.currentNote.id)
     }
 
+    private var namingMode: NoteNamingMode {
+        get { NoteNamingMode(rawValue: namingModeRaw) ?? .letters }
+        nonmutating set { namingModeRaw = newValue.rawValue }
+    }
+
+    private var namingModeBinding: Binding<NoteNamingMode> {
+        Binding(get: { self.namingMode }, set: { self.namingMode = $0 })
+    }
+
     var body: some View {
-        VStack(spacing: 16) {
-            HeaderView(
-                timeRemaining: viewModel.timeRemaining,
-                timeLimit: viewModel.timeLimit
-            )
+        GeometryReader { geo in
+            let horizontalPad: CGFloat = 16
+            let verticalPad: CGFloat = 12
+            let stackSpacing: CGFloat = 10
+            let staffHeight: CGFloat = 240
 
-            StaffView(
-                note: viewModel.currentNote,
-                flashCorrect: viewModel.flashCorrect,
-                flashIncorrect: viewModel.flashIncorrect,
-                shakeTrigger: viewModel.shakeTrigger,
-                rhythm: displayRhythm,
-                clefMode: staffClefMode,
-                noteColor: noteColor(for: viewModel.currentNote)
-            )
-            .frame(maxHeight: 240)
-            .padding(.horizontal, 12)
+            let bottomGap = geo.safeAreaInsets.bottom + 34
 
-            AnswerGridView(mode: .letters, useColoredKeys: useColoredKeys) { letter in
-                guard !(microphoneInputEnabled || midiInputEnabled) else { return }
-                InputFeedbackManager.noteButtonTapped(letter: letter, referenceNote: viewModel.currentNote)
-                viewModel.select(letter: letter)
+            // Remaining height after top content + staff + paddings/spacings + bottom gap.
+            // We measure the top content (header + naming picker) so keyboard can fill the rest.
+            let remaining = geo.size.height
+                - verticalPad * 2
+                - topContentHeight
+                - stackSpacing
+                - staffHeight
+                - stackSpacing
+                - bottomGap
+
+            let proposedKeyboardHeight = min(260, max(220, remaining))
+
+            VStack(spacing: stackSpacing) {
+                // Merge top controls into ONE compact card (方案 A)
+                ControlCard(padding: 8) {
+                    VStack(spacing: 6) {
+                        // ui rev marker removed
+
+                        // Compact timer row (avoid nested card)
+                        HStack {
+                            Text("Time")
+                                .font(.system(size: CuteTheme.FontSize.caption, weight: .semibold, design: .rounded))
+                                .foregroundColor(CuteTheme.textPrimary)
+                            Spacer()
+                            Text(String(format: "%.1fs", max(0, viewModel.timeRemaining)))
+                                .font(.system(size: CuteTheme.FontSize.caption, weight: .semibold, design: .rounded))
+                                .foregroundColor(CuteTheme.textPrimary)
+                        }
+
+                        ProgressView(value: max(0, viewModel.timeRemaining), total: max(0.1, viewModel.timeLimit))
+                            .tint(.black)
+
+                        NamingModePicker(namingMode: namingModeBinding)
+
+                        PracticeClefPicker(
+                            selectedMode: staffClefMode,
+                            onSelect: { mode in
+                                if mode != staffClefMode {
+                                    staffClefModeRaw = mode.rawValue
+                                }
+                            }
+                        )
+                    }
+                }
+                .background(
+                    GeometryReader { p in
+                        Color.clear
+                            .preference(key: HeightKey.self, value: p.size.height)
+                    }
+                )
+
+                StaffView(
+                    note: viewModel.currentNote,
+                    flashCorrect: viewModel.flashCorrect,
+                    flashIncorrect: viewModel.flashIncorrect,
+                    shakeTrigger: viewModel.shakeTrigger,
+                    rhythm: displayRhythm,
+                    clefMode: staffClefMode,
+                    noteColor: noteColor(for: viewModel.currentNote)
+                )
+                .frame(height: staffHeight)
+                .padding(.horizontal, 12)
+
+                PianoKeyboardInputView(namingMode: namingMode, useColoredKeys: useColoredKeys) { letter in
+                    guard !(microphoneInputEnabled || midiInputEnabled) else { return }
+                    InputFeedbackManager.noteButtonTapped(letter: letter, referenceNote: viewModel.currentNote)
+                    viewModel.select(letter: letter)
+                }
+                .frame(height: stableKeyboardHeight)
+                .disabled(microphoneInputEnabled || midiInputEnabled)
+                .opacity((microphoneInputEnabled || midiInputEnabled) ? 0.5 : 1)
+
+                Spacer(minLength: bottomGap)
             }
-            .disabled(microphoneInputEnabled || midiInputEnabled)
-            .opacity((microphoneInputEnabled || midiInputEnabled) ? 0.5 : 1)
+            .padding(.horizontal, horizontalPad)
+            .padding(.vertical, verticalPad)
+            .cuteBackground()
+            .onPreferenceChange(HeightKey.self) { newValue in
+                // Avoid tiny measurement jitter from causing keyboard height changes.
+                if abs(newValue - topContentHeight) > 1 {
+                    topContentHeight = newValue
+                }
+            }
+            .onAppear {
+                stableKeyboardHeight = proposedKeyboardHeight
+            }
+            .onChange(of: geo.size) { _ in
+                stableKeyboardHeight = proposedKeyboardHeight
+            }
+            .onChange(of: topContentHeight) { _ in
+                stableKeyboardHeight = proposedKeyboardHeight
+            }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .cuteBackground()
         .onAppear {
             viewModel.start()
             if microphoneInputEnabled {

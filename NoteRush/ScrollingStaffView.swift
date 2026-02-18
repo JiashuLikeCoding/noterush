@@ -131,8 +131,14 @@ struct ScrollingStaffView: View {
     }
 
     private func noteColor(for judgement: Judgement?, baseColor: Color) -> Color {
-        // Keep note head color consistent; use ring/text to show judgement.
-        return baseColor
+        // Jason request: if correct, make the entire note green.
+        guard let judgement else { return baseColor }
+        switch judgement {
+        case .perfect:
+            return CuteTheme.judgementCorrect
+        case .miss:
+            return CuteTheme.judgementWrong
+        }
     }
 
     private func baseNoteColor(for note: StaffNote, isTarget: Bool) -> Color {
