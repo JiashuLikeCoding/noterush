@@ -328,17 +328,17 @@ struct EarLevelCardView: View {
                             Circle()
                                 .stroke(CuteTheme.controlBorder, lineWidth: 1)
                         )
-                    Text("E\(level.id)")
-                        .font(.custom("AvenirNext-DemiBold", size: 14))
+                    Text("\(level.id)")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundColor(CuteTheme.textPrimary)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Ear level \(level.id)")
-                        .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.body))
+                    Text(level.title)
+                        .font(.system(size: CuteTheme.FontSize.body, weight: .semibold, design: .rounded))
                         .foregroundColor(CuteTheme.textPrimary)
                     Text(level.clefMode.titleKey)
-                        .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.caption))
+                        .font(.system(size: CuteTheme.FontSize.caption, weight: .regular, design: .rounded))
                         .foregroundColor(CuteTheme.textSecondary)
                 }
 
@@ -350,7 +350,7 @@ struct EarLevelCardView: View {
             }
 
             Button(action: onStart) {
-                Text("Start")
+                Text("开始")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(ZenActionButtonStyle())
@@ -449,7 +449,7 @@ struct EarTrainingView: View {
             Spacer(minLength: 10)
         }
         .padding(.top, 10)
-        .cuteBackground()
+        .zenBackground()
         .onAppear {
             // Reset progress every time entering a level.
             viewModel.resetProgressOnEnter()
@@ -460,40 +460,41 @@ struct EarTrainingView: View {
     }
 
     private var topBar: some View {
-        HStack {
-            Button(action: { dismiss() }) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(CuteTheme.textPrimary)
-                    .frame(width: 36, height: 36)
-                    .background(CuteTheme.controlFill)
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(CuteTheme.controlBorder, lineWidth: 1)
-                    )
+        ZStack {
+            HStack {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(CuteTheme.textPrimary)
+                        .frame(width: 36, height: 36)
+                        .background(CuteTheme.controlFill)
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(CuteTheme.controlBorder, lineWidth: 1)
+                        )
+                }
+
+                Spacer()
+
+                Button(action: { showSettings = true }) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(CuteTheme.textPrimary)
+                        .frame(width: 36, height: 36)
+                        .background(CuteTheme.controlFill)
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(CuteTheme.controlBorder, lineWidth: 1)
+                        )
+                }
             }
 
-            Spacer()
-
-            Text(level.title)
-                .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.nav))
+            Text("听音训练")
+                .font(.system(size: 20, weight: .bold, design: .rounded))
                 .foregroundColor(CuteTheme.textPrimary)
-
-            Spacer()
-
-            Button(action: { showSettings = true }) {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(CuteTheme.textPrimary)
-                    .frame(width: 36, height: 36)
-                    .background(CuteTheme.controlFill)
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(CuteTheme.controlBorder, lineWidth: 1)
-                    )
-            }
+                .frame(maxWidth: .infinity, alignment: .center)
         }
         .padding(.horizontal, 16)
     }
