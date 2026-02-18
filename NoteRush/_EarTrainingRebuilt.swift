@@ -661,129 +661,172 @@ struct EarTrainingKeyboard: View {
     let highlightedMidi: Set<Int>
     let onTapMidi: (Int) -> Void
 
-    // One octave starting at C4.
-    private let baseMidi: Int = 60
+    @State private var pressedId: String? = nil
+
+    // One octave C..B (C4..B4)
+    private let whiteLetters: [NoteLetter] = [.c, .d, .e, .f, .g, .a, .b]
+
+    private struct BlackKey {
+        let afterWhiteIndex: Int // black key sits after this white key
+        let labelLetters: String
+        let labelSolfege: String
+        let midi: Int
+    }
+
+    // C#, D#, F#, G#, A#
+    private var blackKeys: [BlackKey] {
+        [
+            BlackKey(afterWhiteIndex: 0, labelLetters: "C#", labelSolfege: "Do#", midi: 61),
+            BlackKey(afterWhiteIndex: 1, labelLetters: "D#", labelSolfege: "Re#", midi: 63),
+            BlackKey(afterWhiteIndex: 3, labelLetters: "F#", labelSolfege: "Fa#", midi: 66),
+            BlackKey(afterWhiteIndex: 4, labelLetters: "G#", labelSolfege: "Sol#", midi: 68),
+            BlackKey(afterWhiteIndex: 5, labelLetters: "A#", labelSolfege: "La#", midi: 70),
+        ]
+    }
 
     var body: some View {
         GeometryReader { proxy in
             let w = proxy.size.width
             let h = proxy.size.height
-            let whiteCount: CGFloat = 7
-            let whiteW = w / whiteCount
-            let blackW = whiteW * 0.72
-            let blackH = h * 0.64
+
+            let gap: CGFloat = 2
+            let whiteCount = CGFloat(whiteLetters.count)
+            let whiteW = (w - gap * (whiteCount - 1)) / whiteCount
+            let blackW = whiteW * 0.62
+            let blackH = h * 0.58
 
             ZStack(alignment: .topLeading) {
-                HStack(spacing: 0) {
-                    ForEach(0..<7, id: \ .self) { i in
-                        let midi = baseMidi + whiteMidiOffsets[i]
-                        KeyButton(
-                            label: whiteLabel(i),
-                            isBlack: false,
-                            isHighlighted: highlightedMidi.contains(midi),
-                            action: { onTapMidi(midi) }
-                        )
-                        .frame(width: whiteW, height: h)
+                // White keys
+                HStack(spacing: gap) {
+                    ForEach(whiteLetters.indices, id: \ .self) { i in
+                        let letter = whiteLetters[i]
+                        let midi = midiForWhite(letter)
+
+                        EarPianoTouchKey(
+                            id: "w_\(letter.rawValue)",
+                            width: whiteW,
+                            height: h,
+                            pressedId: $pressedId,
+                            onTrigger: { onTapMidi(midi) }
+                        ) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color.white)
+
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.black.opacity(0.12), lineWidth: 1)
+
+                                if highlightedMidi.contains(midi) {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(CuteTheme.judgementCorrect, lineWidth: 3)
+                                        .shadow(color: CuteTheme.judgementCorrect.opacity(0.35), radius: 6)
+                                        .padding(2)
+                                }
+
+                                Text(letter.displayName(for: namingMode))
+                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                    .foregroundColor(CuteTheme.textPrimary)
+                                    .padding(.bottom, 32)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                                    .background(Color.white.opacity(0.0001))
+                            }
+                        }
                     }
                 }
 
+                // Black keys
                 ForEach(blackKeys.indices, id: \ .self) { idx in
                     let bk = blackKeys[idx]
-                    let x = (CGFloat(bk.whiteIndex) + 1) * whiteW - blackW / 2
-                    let midi = baseMidi + bk.midiOffset
-                    KeyButton(
-                        label: blackLabel(bk.pitchClass),
-                        isBlack: true,
-                        isHighlighted: highlightedMidi.contains(midi),
-                        action: { onTapMidi(midi) }
-                    )
-                    .frame(width: blackW, height: blackH)
-                    // Use offset (top-left anchored) to avoid position hit-test quirks.
+                    let boundaryX = (CGFloat(bk.afterWhiteIndex) + 1) * (whiteW + gap) - gap / 2
+                    let x = boundaryX - blackW / 2
+
+                    EarPianoTouchKey(
+                        id: "b_\(bk.labelLetters)",
+                        width: blackW,
+                        height: blackH,
+                        pressedId: $pressedId,
+                        onTrigger: { onTapMidi(bk.midi) }
+                    ) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.black.opacity(0.95))
+                                .shadow(color: Color.black.opacity(0.25), radius: 5, x: 0, y: 3)
+
+                            if highlightedMidi.contains(bk.midi) {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(CuteTheme.judgementCorrect, lineWidth: 2)
+                                    .shadow(color: CuteTheme.judgementCorrect.opacity(0.35), radius: 6)
+                                    .padding(2)
+                            }
+
+                            Text(namingMode == .letters ? bk.labelLetters : bk.labelSolfege)
+                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .foregroundColor(Color.white)
+                                .padding(.bottom, 20)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                        }
+                    }
                     .offset(x: x, y: 0)
                     .zIndex(10)
                 }
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(CuteTheme.controlBorder, lineWidth: 1)
-        )
     }
 
-    private var whiteMidiOffsets: [Int] { [0, 2, 4, 5, 7, 9, 11] }
-
-    private struct BlackKey {
-        let whiteIndex: Int
-        let midiOffset: Int
-        let pitchClass: Int
-    }
-
-    private var blackKeys: [BlackKey] {
-        [
-            BlackKey(whiteIndex: 0, midiOffset: 1, pitchClass: 1),
-            BlackKey(whiteIndex: 1, midiOffset: 3, pitchClass: 3),
-            BlackKey(whiteIndex: 3, midiOffset: 6, pitchClass: 6),
-            BlackKey(whiteIndex: 4, midiOffset: 8, pitchClass: 8),
-            BlackKey(whiteIndex: 5, midiOffset: 10, pitchClass: 10)
-        ]
-    }
-
-    private func whiteLabel(_ index: Int) -> String {
-        let letters: [NoteLetter] = [.c, .d, .e, .f, .g, .a, .b]
-        return letters[index].displayName(for: namingMode)
-    }
-
-    private func blackLabel(_ pitchClass: Int) -> String {
-        // pitchClass is midi%12 for sharps.
-        if namingMode == .solfege {
-            switch pitchClass {
-            case 1: return "Do#"
-            case 3: return "Re#"
-            case 6: return "Fa#"
-            case 8: return "Sol#"
-            case 10: return "La#"
-            default: return "#"
-            }
-        }
-        switch pitchClass {
-        case 1: return "C#"
-        case 3: return "D#"
-        case 6: return "F#"
-        case 8: return "G#"
-        case 10: return "A#"
-        default: return "#"
+    private func midiForWhite(_ letter: NoteLetter) -> Int {
+        switch letter {
+        case .c: return 60
+        case .d: return 62
+        case .e: return 64
+        case .f: return 65
+        case .g: return 67
+        case .a: return 69
+        case .b: return 71
         }
     }
+}
 
-    private struct KeyButton: View {
-        let label: String
-        let isBlack: Bool
-        let isHighlighted: Bool
-        let action: () -> Void
+private struct EarPianoTouchKey<Content: View>: View {
+    let id: String
+    let width: CGFloat
+    let height: CGFloat
+    @Binding var pressedId: String?
+    let onTrigger: () -> Void
+    @ViewBuilder let content: () -> Content
 
-        var body: some View {
-            Button(action: action) {
-                ZStack {
-                    Rectangle()
-                        .fill(isBlack ? CuteTheme.textPrimary : Color.white)
+    @State private var isDown: Bool = false
 
-                    if isHighlighted {
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(CuteTheme.judgementCorrect, lineWidth: isBlack ? 2 : 3)
-                            .shadow(color: CuteTheme.judgementCorrect.opacity(0.35), radius: 6)
-                            .padding(isBlack ? 2 : 3)
-                    }
-
-                    Text(label)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundColor(isBlack ? Color.white : CuteTheme.textPrimary)
-                        .padding(.bottom, 6)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                }
-            }
-            .buttonStyle(.plain)
+    var body: some View {
+        content()
+            .frame(width: width, height: height)
             .contentShape(Rectangle())
-        }
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        if !isDown {
+                            isDown = true
+                            pressedId = id
+                        }
+                    }
+                    .onEnded { _ in
+                        let shouldTrigger = isDown && pressedId == id
+                        isDown = false
+                        if pressedId == id {
+                            pressedId = nil
+                        }
+                        if shouldTrigger {
+                            onTrigger()
+                        }
+                    }
+            )
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    pressedId = id
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        if pressedId == id { pressedId = nil }
+                    }
+                    onTrigger()
+                }
+            )
     }
 }
