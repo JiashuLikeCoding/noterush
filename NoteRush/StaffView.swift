@@ -893,9 +893,9 @@ struct PianoKeyboardInputView: View {
                             height: contentH,
                             content: AnyView(
                                 ZStack {
-                                    // White key surface (separate keys; background shows between them)
+                                    // White key surface
                                     RoundedRectangle(cornerRadius: 10)
-                                        .fill(Color.white)
+                                        .fill(useColoredKeys ? CuteTheme.noteColor(for: letter).opacity(0.32) : Color.white)
 
                                     // (no solid separators; use gaps + border)
 

@@ -17,6 +17,11 @@ struct PracticeView: View {
     @AppStorage(AppSettingsKeys.staffClefMode) private var staffClefModeRaw: String = StaffClefMode.treble.rawValue
     @AppStorage(AppSettingsKeys.useColoredKeys) private var useColoredKeys: Bool = true
     @AppStorage(AppSettingsKeys.useColoredNotes) private var useColoredNotes: Bool = false
+
+    private var resolvedUseColoredKeys: Bool {
+        // If colored notes are enabled, force keyboard keys to match.
+        useColoredKeys || useColoredNotes
+    }
     @AppStorage(AppSettingsKeys.noteDisplayRhythmMode) private var noteDisplayRhythmModeRaw: String = NoteDisplayRhythmMode.quarter.rawValue
     @AppStorage(AppSettingsKeys.noteNamingMode) private var namingModeRaw: String = NoteNamingMode.letters.rawValue
     @AppStorage(AppSettingsKeys.inputMode) private var inputModeRaw: String = InputMode.buttons.rawValue
@@ -119,7 +124,7 @@ struct PracticeView: View {
                 .frame(height: staffHeight)
                 .padding(.horizontal, 12)
 
-                PianoKeyboardInputView(namingMode: namingMode, useColoredKeys: useColoredKeys) { letter in
+                PianoKeyboardInputView(namingMode: namingMode, useColoredKeys: resolvedUseColoredKeys) { letter in
                     guard !(microphoneInputEnabled || midiInputEnabled) else { return }
                     InputFeedbackManager.noteButtonTapped(letter: letter, referenceNote: viewModel.currentNote)
                     viewModel.select(letter: letter)

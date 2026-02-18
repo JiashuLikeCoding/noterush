@@ -23,6 +23,11 @@ struct SongModeView: View {
     @AppStorage(AppSettingsKeys.showJudgementNoteName) private var showJudgementNoteName: Bool = false
     @AppStorage(AppSettingsKeys.useColoredKeys) private var useColoredKeys: Bool = true
     @AppStorage(AppSettingsKeys.useColoredNotes) private var useColoredNotes: Bool = false
+
+    private var resolvedUseColoredKeys: Bool {
+        // If colored notes are enabled, force keyboard keys to match.
+        useColoredKeys || useColoredNotes
+    }
     @AppStorage(AppSettingsKeys.noteDisplayRhythmMode) private var noteDisplayRhythmModeRaw: String = NoteDisplayRhythmMode.quarter.rawValue
     @AppStorage(AppSettingsKeys.inputMode) private var inputModeRaw: String = InputMode.buttons.rawValue
 
@@ -151,7 +156,7 @@ struct SongModeView: View {
                     .padding(.horizontal, 6)
                     .cuteCard()
 
-                    PianoKeyboardInputView(namingMode: namingMode, useColoredKeys: useColoredKeys) { letter in
+                    PianoKeyboardInputView(namingMode: namingMode, useColoredKeys: resolvedUseColoredKeys) { letter in
                         guard !microphoneInputEnabled else { return }
                         InputFeedbackManager.noteButtonTapped(letter: letter, referenceNote: viewModel.soundAnchorNote)
                         viewModel.select(letter: letter)
