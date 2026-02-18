@@ -55,22 +55,31 @@ enum CuteTheme {
         static let nav: CGFloat = 13
     }
 
+    /// Canonical note/letter colors used across staff + keyboard when "colored notes" is enabled.
+    /// Chosen to be a bit softer / more UI-friendly while staying clearly distinct.
     static func noteColor(for letter: NoteLetter) -> Color {
         switch letter {
         case .c:
-            return Color(red: 0.78, green: 0.16, blue: 0.16)
+            // coral red
+            return Color(red: 0.91, green: 0.36, blue: 0.36)
         case .d:
-            return Color(red: 0.18, green: 0.46, blue: 0.12)
+            // fresh green
+            return Color(red: 0.30, green: 0.69, blue: 0.33)
         case .e:
-            return Color(red: 0.20, green: 0.36, blue: 0.78)
+            // bright blue
+            return Color(red: 0.29, green: 0.49, blue: 0.97)
         case .f:
-            return Color(red: 0.60, green: 0.26, blue: 0.10)
+            // warm orange
+            return Color(red: 0.95, green: 0.64, blue: 0.23)
         case .g:
-            return Color(red: 0.10, green: 0.48, blue: 0.58)
+            // teal
+            return Color(red: 0.21, green: 0.72, blue: 0.77)
         case .a:
-            return Color(red: 0.78, green: 0.12, blue: 0.52)
+            // pink
+            return Color(red: 0.90, green: 0.35, blue: 0.69)
         case .b:
-            return Color(red: 0.55, green: 0.24, blue: 0.75)
+            // purple
+            return Color(red: 0.61, green: 0.42, blue: 0.97)
         }
     }
 }
