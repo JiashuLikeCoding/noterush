@@ -851,14 +851,6 @@ private struct EarPianoTouchKey<Content: View>: View {
                         }
                     }
             )
-            .simultaneousGesture(
-                TapGesture().onEnded {
-                    pressedId = id
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                        if pressedId == id { pressedId = nil }
-                    }
-                    onTrigger()
-                }
-            )
+            // TapGesture removed: it caused double-trigger on iOS (Tap + Drag).
     }
 }
