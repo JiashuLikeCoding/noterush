@@ -222,8 +222,9 @@ final class EarTrainingViewModel: ObservableObject {
             }
         }
 
-        targetPlaybackMidi = clipped.sorted() // low->high
-        targetMidi = targetPlaybackMidi
+        // Randomize playback order (not always low->high).
+        targetMidi = clipped
+        targetPlaybackMidi = clipped.shuffled()
 
         // Autoplay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
@@ -285,7 +286,7 @@ final class EarTrainingViewModel: ObservableObject {
     }
 
     func confirm() {
-        let ok = inputMidi.sorted() == targetMidi
+        let ok = inputMidi.sorted() == targetMidi.sorted()
         lastResultCorrect = ok
 
         if ok {
@@ -536,7 +537,7 @@ struct EarTrainingView: View {
 
                 EarTrainingStaffCard(
                     clefMode: level.clefMode,
-                    targetMidi: viewModel.targetMidi,
+                    targetMidi: viewModel.targetPlaybackMidi,
                     inputMidi: viewModel.inputMidi,
                     revealedTargetCount: viewModel.revealedTargetCount,
                     expectedCount: viewModel.targetMidi.count,
@@ -547,7 +548,7 @@ struct EarTrainingView: View {
                 EarTrainingKeyboard(
                     namingMode: namingMode,
                     baseMidi: viewModel.keyboardBaseMidi,
-                    revealedMidi: Set(viewModel.targetMidi.prefix(viewModel.revealedTargetCount)),
+                    revealedMidi: Set(viewModel.targetPlaybackMidi.prefix(viewModel.revealedTargetCount)),
                     pulseMidi: viewModel.revealPulseMidi,
                     pulseToken: viewModel.revealPulseToken,
                     onTapMidi: { viewModel.addInput(midi: $0) }
