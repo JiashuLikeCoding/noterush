@@ -158,6 +158,10 @@ final class EarTrainingViewModel: ObservableObject {
     @Published private(set) var inputMidi: [Int] = []
 
     @Published private(set) var revealedTargetCount: Int = 0
+
+    // Key flashing while revealing answer (supports duplicates)
+    @Published private(set) var revealPulseMidi: Int? = nil
+    @Published private(set) var revealPulseToken: Int = 0
     @Published private(set) var awaitingNextAfterCorrect: Bool = false
     @Published private(set) var lastResultCorrect: Bool? = nil
     @Published var wrongFlashTrigger: Int = 0
@@ -214,7 +218,13 @@ final class EarTrainingViewModel: ObservableObject {
             DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.42) { [weak self] in
                 guard let self else { return }
                 self.revealedTargetCount = min(total, i + 1)
-                PianoSoundEngine.shared.play(midi: self.targetMidi[i])
+
+                // Flash the key for THIS step (even if the midi repeats)
+                let midi = self.targetMidi[i]
+                self.revealPulseMidi = midi
+                self.revealPulseToken &+= 1
+
+                PianoSoundEngine.shared.play(midi: midi)
             }
         }
     }
@@ -459,7 +469,9 @@ struct EarTrainingView: View {
 
                 EarTrainingKeyboard(
                     namingMode: namingMode,
-                    highlightedMidi: Set(viewModel.targetMidi.prefix(viewModel.revealedTargetCount)),
+                    revealedMidi: Set(viewModel.targetMidi.prefix(viewModel.revealedTargetCount)),
+                    pulseMidi: viewModel.revealPulseMidi,
+                    pulseToken: viewModel.revealPulseToken,
                     onTapMidi: { viewModel.addInput(midi: $0) }
                 )
                 // Fill remaining space, but clamp max height so it stays piano-like.
@@ -690,7 +702,9 @@ struct EarTrainingStaffCard: View {
 
 struct EarTrainingKeyboard: View {
     let namingMode: NoteNamingMode
-    let highlightedMidi: Set<Int>
+    let revealedMidi: Set<Int>
+    let pulseMidi: Int?
+    let pulseToken: Int
     let onTapMidi: (Int) -> Void
 
     @State private var pressedId: String? = nil
@@ -748,11 +762,20 @@ struct EarTrainingKeyboard: View {
                                 RoundedRectangle(cornerRadius: 10)
                                     .stroke(Color.black.opacity(0.12), lineWidth: 1)
 
-                                if highlightedMidi.contains(midi) {
+                                if revealedMidi.contains(midi) {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(CuteTheme.judgementCorrect.opacity(0.65), lineWidth: 2)
+                                        .padding(2)
+                                }
+
+                                // Pulse highlight (supports duplicates by using pulseToken)
+                                if pulseMidi == midi {
                                     RoundedRectangle(cornerRadius: 10)
                                         .stroke(CuteTheme.judgementCorrect, lineWidth: 3)
                                         .shadow(color: CuteTheme.judgementCorrect.opacity(0.35), radius: 6)
                                         .padding(2)
+                                        .transition(.opacity)
+                                        .id("pulse_w_\(midi)_\(pulseToken)")
                                 }
 
                                 Text(letter.displayName(for: namingMode))
@@ -784,11 +807,19 @@ struct EarTrainingKeyboard: View {
                                 .fill(Color.black.opacity(0.95))
                                 .shadow(color: Color.black.opacity(0.25), radius: 5, x: 0, y: 3)
 
-                            if highlightedMidi.contains(bk.midi) {
+                            if revealedMidi.contains(bk.midi) {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(CuteTheme.judgementCorrect.opacity(0.65), lineWidth: 2)
+                                    .padding(2)
+                            }
+
+                            if pulseMidi == bk.midi {
                                 RoundedRectangle(cornerRadius: 8)
                                     .stroke(CuteTheme.judgementCorrect, lineWidth: 2)
                                     .shadow(color: CuteTheme.judgementCorrect.opacity(0.35), radius: 6)
                                     .padding(2)
+                                    .transition(.opacity)
+                                    .id("pulse_b_\(bk.midi)_\(pulseToken)")
                             }
 
                             Text(namingMode == .letters ? bk.labelLetters : bk.labelSolfege)
