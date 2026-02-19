@@ -32,7 +32,8 @@ struct EarTrainingLevel: Identifiable, Equatable {
 
     static let library: [EarTrainingLevel] = [
         EarTrainingLevel(id: 1, title: "高音谱", clefMode: .treble, midiRange: 57...84), // A3..C6
-        EarTrainingLevel(id: 2, title: "低音谱", clefMode: .bass, midiRange: 36...64)    // C2..E4
+        EarTrainingLevel(id: 2, title: "低音谱", clefMode: .bass, midiRange: 36...64),   // C2..E4
+        EarTrainingLevel(id: 3, title: "高低音谱", clefMode: .grand, midiRange: 36...84) // C2..C6
     ]
 }
 
