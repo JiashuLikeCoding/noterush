@@ -2,3 +2,6 @@ NoteRush/Resources/SoundFonts/soundfont.sf2
 
 # Build artifacts
 build/
+
+# Large soundfont (kept locally, excluded from GitHub)
+NoteRush/Assets.xcassets/soundfont.dataset/soundfont.sf2

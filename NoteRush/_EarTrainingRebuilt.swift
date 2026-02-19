@@ -1,6 +1,7 @@
 import SwiftUI
 import AVFoundation
 import Combine
+import UIKit
 
 // This file rebuilds the Ear Training (听音) flow that previously existed as untracked files.
 // It is intentionally self-contained and minimal, and relies on shared domain types from PracticeViewModel.swift.
@@ -47,10 +48,28 @@ final class PianoSoundEngine {
     private let engine = AVAudioEngine()
     private let sampler = AVAudioUnitSampler()
     private var didStart = false
+    private var tempSF2URL: URL?
 
     private init() {
         engine.attach(sampler)
         engine.connect(sampler, to: engine.mainMixerNode, format: nil)
+    }
+
+    private func writeTempSF2IfNeeded(data: Data) -> URL? {
+        // AVAudioUnitSampler expects a file URL. If the soundfont is packaged as a Data Asset,
+        // we need to write it to a temp location first.
+        if let url = tempSF2URL, FileManager.default.fileExists(atPath: url.path) {
+            return url
+        }
+
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("soundfont.sf2")
+        do {
+            try data.write(to: url, options: [.atomic])
+            tempSF2URL = url
+            return url
+        } catch {
+            return nil
+        }
     }
 
     func startIfNeeded() {
@@ -58,9 +77,10 @@ final class PianoSoundEngine {
 
         // Load instrument FIRST (this is usually the source of the first-tap hitch).
         // Prefer bundled soundfont if present.
-        if let sf2 = Bundle.main.url(forResource: "soundfont", withExtension: "sf2")
-            ?? Bundle.main.url(forResource: "soundfont", withExtension: "sf2", subdirectory: "SoundFonts")
-            ?? Bundle.main.url(forResource: "soundfont", withExtension: "sf2", subdirectory: "Resources/SoundFonts") {
+        // Note: In this project, the soundfont is stored in Assets.xcassets as a Data Set,
+        // which is accessed via NSDataAsset.
+        if let asset = NSDataAsset(name: "soundfont"),
+           let sf2 = writeTempSF2IfNeeded(data: asset.data) {
             try? sampler.loadSoundBankInstrument(
                 at: sf2,
                 program: 0,
