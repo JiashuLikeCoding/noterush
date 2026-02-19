@@ -872,6 +872,9 @@ private struct EarPianoTouchKey<Content: View>: View {
     let onTrigger: () -> Void
     @ViewBuilder let content: () -> Content
 
+    // NOTE: Using DragGesture(minDistance:0) for immediate response.
+    // Some gesture-cancel paths may skip `onEnded`, so we also schedule a short reset
+    // to avoid the key getting "stuck" and blocking future taps.
     @State private var isDown: Bool = false
 
     var body: some View {
@@ -881,22 +884,21 @@ private struct EarPianoTouchKey<Content: View>: View {
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { _ in
-                        if !isDown {
-                            isDown = true
-                            pressedId = id
+                        guard !isDown else { return }
+                        isDown = true
+                        pressedId = id
+                        onTrigger()
+
+                        // Safety reset in case `onEnded` doesn't fire.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+                            isDown = false
+                            if pressedId == id { pressedId = nil }
                         }
                     }
                     .onEnded { _ in
-                        let shouldTrigger = isDown && pressedId == id
                         isDown = false
-                        if pressedId == id {
-                            pressedId = nil
-                        }
-                        if shouldTrigger {
-                            onTrigger()
-                        }
+                        if pressedId == id { pressedId = nil }
                     }
             )
-            // TapGesture removed: it caused double-trigger on iOS (Tap + Drag).
     }
 }
