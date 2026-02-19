@@ -154,7 +154,11 @@ final class EarTrainingViewModel: ObservableObject {
     @Published private(set) var level: EarTrainingLevel
     @Published var notesPerQuestion: Int = 1
 
+    // targetMidi: what the user should answer on the 1-octave keyboard (C4..B4)
     @Published private(set) var targetMidi: [Int] = []
+    // targetPlaybackMidi: the actual pitches we play (may span octaves depending on level range)
+    @Published private(set) var targetPlaybackMidi: [Int] = []
+
     @Published private(set) var inputMidi: [Int] = []
 
     @Published private(set) var revealedTargetCount: Int = 0
@@ -185,6 +189,7 @@ final class EarTrainingViewModel: ObservableObject {
         lastResultCorrect = nil
         inputMidi = []
         revealedTargetCount = 0
+        revealPulseMidi = nil
 
         var out: [Int] = []
         let pool = allowedMidiNotes
@@ -192,7 +197,11 @@ final class EarTrainingViewModel: ObservableObject {
         for _ in 0..<n {
             out.append(pool[Int.random(in: 0..<pool.count)])
         }
-        targetMidi = out.sorted() // low->high
+
+        // Audio can span octaves, but the on-screen keyboard is always one octave (C4..B4).
+        // So we normalize targets to that octave for both reveal and confirmation.
+        targetPlaybackMidi = out.sorted() // low->high
+        targetMidi = targetPlaybackMidi.map { normalizedMidiForKeyboard($0) }.sorted()
 
         // Autoplay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
@@ -201,7 +210,7 @@ final class EarTrainingViewModel: ObservableObject {
     }
 
     func play() {
-        let seq = targetMidi
+        let seq = targetPlaybackMidi
         for (i, midi) in seq.enumerated() {
             DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.42) {
                 PianoSoundEngine.shared.play(midi: midi)
@@ -210,7 +219,7 @@ final class EarTrainingViewModel: ObservableObject {
     }
 
     func revealAnswer() {
-        let total = targetMidi.count
+        let total = targetPlaybackMidi.count
         guard total > 0 else { return }
         revealedTargetCount = 0
 
@@ -219,12 +228,14 @@ final class EarTrainingViewModel: ObservableObject {
                 guard let self else { return }
                 self.revealedTargetCount = min(total, i + 1)
 
-                // Flash the key for THIS step (even if the midi repeats)
-                let midi = self.targetMidi[i]
-                self.revealPulseMidi = midi
+                // Flash the key for THIS step (even if the midi repeats).
+                // Keyboard is 1-octave, so normalize to C4..B4.
+                let playbackMidi = self.targetPlaybackMidi[i]
+                let keyboardMidi = self.normalizedMidiForKeyboard(playbackMidi)
+                self.revealPulseMidi = keyboardMidi
                 self.revealPulseToken &+= 1
 
-                PianoSoundEngine.shared.play(midi: midi)
+                PianoSoundEngine.shared.play(midi: playbackMidi)
             }
         }
     }
@@ -233,6 +244,8 @@ final class EarTrainingViewModel: ObservableObject {
         guard !awaitingNextAfterCorrect else { return }
         guard inputMidi.count < targetMidi.count else { return }
         inputMidi.append(midi)
+
+        // Play what the user tapped (keyboard octave)
         PianoSoundEngine.shared.play(midi: midi)
 
         if inputMidi.count == targetMidi.count {
@@ -287,6 +300,12 @@ final class EarTrainingViewModel: ObservableObject {
             let cur = correctCounts[m] ?? 0
             correctCounts[m] = min(requiredCorrectPerNote, cur + 1)
         }
+    }
+
+    private func normalizedMidiForKeyboard(_ midi: Int) -> Int {
+        // Map any midi note to the on-screen keyboard octave (C4..B4 = 60..71)
+        let pc = (midi % 12 + 12) % 12
+        return 60 + pc
     }
 
     // points-based progress (changes every correct)
