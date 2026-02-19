@@ -387,8 +387,13 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 
 struct MelodyNote: Identifiable, Equatable {
     let id = UUID()
-    let letter: NoteLetter
+    let midi: Int
     let beats: Double
+
+    var letter: NoteLetter {
+        // best-effort pitch class mapping (drops accidentals)
+        NoteLetter.fromSemitone(midi) ?? .c
+    }
 }
 
 struct Song: Identifiable {
@@ -444,7 +449,9 @@ struct Song: Identifiable {
         clefMode: StaffClefMode
     ) -> Song {
         let pool: [StaffNote] = (clefMode == .bass) ? StaffNote.all(for: StaffClef.bass) : StaffNote.all(for: StaffClef.treble)
-        let notes: [StaffNote] = melody.compactMap { m in pool.first(where: { $0.letter == m.letter }) ?? pool.first }
+        let notes: [StaffNote] = melody.compactMap { m in
+            pool.first(where: { $0.midiNoteNumber == m.midi }) ?? pool.first(where: { $0.letter == m.letter }) ?? pool.first
+        }
         let duration = max(8, Double(melody.count))
         return Song(title: title, bpm: bpm, timeSignature: timeSignature, rhythm: .quarter, duration: duration, clefMode: clefMode, notes: notes)
     }
@@ -482,23 +489,85 @@ struct SongTemplate: Identifiable {
     let melody: [MelodyNote]?
 
     static let library: [SongTemplate] = [
+        // Public domain / traditional melodies (safe for demos)
+
+        // Twinkle Twinkle Little Star (traditional melody)
         SongTemplate(
             id: UUID(),
-            title: "Song 1",
+            title: "Twinkle Twinkle",
             level: 1,
-            allowedLetters: [.c, .d, .e],
+            allowedLetters: [.c, .d, .e, .f, .g, .a],
             duration: 18,
             rhythm: .quarter,
-            melody: nil
+            melody: [
+                // C C G G A A G | F F E E D D C
+                MelodyNote(midi: 60, beats: 1), MelodyNote(midi: 60, beats: 1),
+                MelodyNote(midi: 67, beats: 1), MelodyNote(midi: 67, beats: 1),
+                MelodyNote(midi: 69, beats: 1), MelodyNote(midi: 69, beats: 1),
+                MelodyNote(midi: 67, beats: 2),
+                MelodyNote(midi: 65, beats: 1), MelodyNote(midi: 65, beats: 1),
+                MelodyNote(midi: 64, beats: 1), MelodyNote(midi: 64, beats: 1),
+                MelodyNote(midi: 62, beats: 1), MelodyNote(midi: 62, beats: 1),
+                MelodyNote(midi: 60, beats: 2),
+            ]
         ),
+
+        // Mary Had a Little Lamb (traditional)
         SongTemplate(
             id: UUID(),
-            title: "Song 2",
+            title: "Mary Had a Little Lamb",
             level: 1,
+            allowedLetters: [.c, .d, .e, .g],
+            duration: 18,
+            rhythm: .quarter,
+            melody: [
+                // E D C D E E E | D D D | E G G
+                MelodyNote(midi: 64, beats: 1), MelodyNote(midi: 62, beats: 1), MelodyNote(midi: 60, beats: 1),
+                MelodyNote(midi: 62, beats: 1), MelodyNote(midi: 64, beats: 1), MelodyNote(midi: 64, beats: 1),
+                MelodyNote(midi: 64, beats: 2),
+                MelodyNote(midi: 62, beats: 1), MelodyNote(midi: 62, beats: 1), MelodyNote(midi: 62, beats: 2),
+                MelodyNote(midi: 64, beats: 1), MelodyNote(midi: 67, beats: 1), MelodyNote(midi: 67, beats: 2),
+            ]
+        ),
+
+        // Ode to Joy (Beethoven, public domain)
+        SongTemplate(
+            id: UUID(),
+            title: "Ode to Joy",
+            level: 2,
             allowedLetters: [.c, .d, .e, .f, .g],
             duration: 22,
             rhythm: .quarter,
-            melody: nil
+            melody: [
+                // E E F G | G F E D | C C D E | E D D
+                MelodyNote(midi: 64, beats: 1), MelodyNote(midi: 64, beats: 1),
+                MelodyNote(midi: 65, beats: 1), MelodyNote(midi: 67, beats: 1),
+                MelodyNote(midi: 67, beats: 1), MelodyNote(midi: 65, beats: 1),
+                MelodyNote(midi: 64, beats: 1), MelodyNote(midi: 62, beats: 1),
+                MelodyNote(midi: 60, beats: 1), MelodyNote(midi: 60, beats: 1),
+                MelodyNote(midi: 62, beats: 1), MelodyNote(midi: 64, beats: 1),
+                MelodyNote(midi: 64, beats: 1), MelodyNote(midi: 62, beats: 1),
+                MelodyNote(midi: 62, beats: 2),
+            ]
+        ),
+
+        // Frère Jacques (traditional)
+        SongTemplate(
+            id: UUID(),
+            title: "Frere Jacques",
+            level: 2,
+            allowedLetters: [.c, .d, .e, .f, .g, .a],
+            duration: 22,
+            rhythm: .quarter,
+            melody: [
+                // C D E C | C D E C | E F G | E F G
+                MelodyNote(midi: 60, beats: 1), MelodyNote(midi: 62, beats: 1),
+                MelodyNote(midi: 64, beats: 1), MelodyNote(midi: 60, beats: 1),
+                MelodyNote(midi: 60, beats: 1), MelodyNote(midi: 62, beats: 1),
+                MelodyNote(midi: 64, beats: 1), MelodyNote(midi: 60, beats: 1),
+                MelodyNote(midi: 64, beats: 1), MelodyNote(midi: 65, beats: 1), MelodyNote(midi: 67, beats: 2),
+                MelodyNote(midi: 64, beats: 1), MelodyNote(midi: 65, beats: 1), MelodyNote(midi: 67, beats: 2),
+            ]
         )
     ]
 }
