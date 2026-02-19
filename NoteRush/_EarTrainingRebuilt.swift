@@ -199,6 +199,18 @@ final class EarTrainingViewModel: ObservableObject {
         let poolInWindow = Array(window)
         var clipped: [Int] = []
 
+        // Prefer NO duplicates within a question.
+        // (The user reported "连续2个一样的音"; this eliminates adjacent duplicates and also keeps the question more varied.)
+        func appendUnique(from candidates: [Int]) {
+            let used = Set(clipped)
+            let available = candidates.filter { !used.contains($0) }
+            if let pick = available.randomElement() {
+                clipped.append(pick)
+            } else if let fallback = candidates.randomElement() {
+                clipped.append(fallback)
+            }
+        }
+
         // For grand staff, try to include BOTH clefs in the same question when possible.
         // (Some notes < 60 show on bass, some >= 60 show on treble.)
         if level.clefMode == .grand, n >= 2 {
@@ -206,19 +218,19 @@ final class EarTrainingViewModel: ObservableObject {
             let highPool = poolInWindow.filter { $0 >= 60 }
 
             if !lowPool.isEmpty, !highPool.isEmpty {
-                clipped.append(lowPool[Int.random(in: 0..<lowPool.count)])
-                clipped.append(highPool[Int.random(in: 0..<highPool.count)])
+                appendUnique(from: lowPool)
+                appendUnique(from: highPool)
                 while clipped.count < n {
-                    clipped.append(poolInWindow[Int.random(in: 0..<poolInWindow.count)])
+                    appendUnique(from: poolInWindow)
                 }
             } else {
-                for _ in 0..<n {
-                    clipped.append(poolInWindow[Int.random(in: 0..<poolInWindow.count)])
+                while clipped.count < n {
+                    appendUnique(from: poolInWindow)
                 }
             }
         } else {
-            for _ in 0..<n {
-                clipped.append(poolInWindow[Int.random(in: 0..<poolInWindow.count)])
+            while clipped.count < n {
+                appendUnique(from: poolInWindow)
             }
         }
 
