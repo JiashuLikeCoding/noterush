@@ -528,6 +528,17 @@ final class SongViewModel: ObservableObject {
     }
     var noteScale: Double { 1.0 }
 
+    /// Start the song with a short "pre-roll" so the first note begins at the left edge
+    /// (instead of already sitting on the judgement line).
+    private func resetClockForScrollStart() {
+        // In ScrollingStaffView: x = judgementX - (event.time - currentTime) * (leftSpan/leadTime) * scrollSpeedMultiplier
+        // We want the first event (time=0) to start at leftMargin, so set currentTime = -leadTime/scrollSpeedMultiplier.
+        let lead = scrollConfig.leadTime
+        let mult = max(0.05, scrollSpeedMultiplier)
+        currentTime = -lead / mult
+        lastJudgementTime = currentTime
+    }
+
     private var timer: Timer?
     private var currentIndex: Int = 0
 
@@ -535,6 +546,7 @@ final class SongViewModel: ObservableObject {
         self.song = song
         self.bpm = song.bpm
         rebuildEvents()
+        resetClockForScrollStart()
         soundAnchorNote = currentTargetNote
     }
 
@@ -585,7 +597,7 @@ final class SongViewModel: ObservableObject {
     func restart(withBpm newBpm: Double) {
         bpm = newBpm
         song.bpm = newBpm
-        currentTime = 0
+        resetClockForScrollStart()
         currentIndex = 0
         lastJudgement = nil
         rebuildEvents()
