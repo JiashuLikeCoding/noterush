@@ -989,9 +989,8 @@ private struct EarPianoTouchKey<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     // NOTE: Using DragGesture(minDistance:0) for immediate response.
-    // Some gesture-cancel paths may skip `onEnded`, so we also schedule a short reset
-    // to avoid the key getting "stuck" and blocking future taps.
-    @State private var isDown: Bool = false
+    // We only fire when `pressedId` changes to this key, and we also schedule a short reset
+    // so the key never gets "stuck" in a pressed state (some cancel paths skip `onEnded`).
 
     var body: some View {
         content()
@@ -1000,19 +999,17 @@ private struct EarPianoTouchKey<Content: View>: View {
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { _ in
-                        guard !isDown else { return }
-                        isDown = true
+                        // Fire once when the press enters this key.
+                        guard pressedId != id else { return }
                         pressedId = id
                         onTrigger()
 
                         // Safety reset in case `onEnded` doesn't fire.
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-                            isDown = false
                             if pressedId == id { pressedId = nil }
                         }
                     }
                     .onEnded { _ in
-                        isDown = false
                         if pressedId == id { pressedId = nil }
                     }
             )
