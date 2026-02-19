@@ -31,12 +31,8 @@ struct EarTrainingLevel: Identifiable, Equatable {
     let midiRange: ClosedRange<Int>
 
     static let library: [EarTrainingLevel] = [
-        EarTrainingLevel(id: 1, title: "关卡 1", clefMode: .treble, midiRange: 60...71), // C4..B4
-        EarTrainingLevel(id: 2, title: "关卡 2", clefMode: .treble, midiRange: 57...84), // A3..C6
-        EarTrainingLevel(id: 3, title: "关卡 3", clefMode: .bass, midiRange: 48...59),   // C3..B3
-        EarTrainingLevel(id: 4, title: "关卡 4", clefMode: .bass, midiRange: 36...64),   // C2..E4
-        EarTrainingLevel(id: 5, title: "关卡 5", clefMode: .grand, midiRange: 48...72),  // C3..C5 (narrower than before)
-        EarTrainingLevel(id: 6, title: "关卡 6", clefMode: .grand, midiRange: 36...84)   // C2..C6
+        EarTrainingLevel(id: 1, title: "高音谱", clefMode: .treble, midiRange: 57...84), // A3..C6
+        EarTrainingLevel(id: 2, title: "低音谱", clefMode: .bass, midiRange: 36...64)    // C2..E4
     ]
 }
 
