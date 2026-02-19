@@ -198,8 +198,28 @@ final class EarTrainingViewModel: ObservableObject {
 
         let poolInWindow = Array(window)
         var clipped: [Int] = []
-        for _ in 0..<n {
-            clipped.append(poolInWindow[Int.random(in: 0..<poolInWindow.count)])
+
+        // For grand staff, try to include BOTH clefs in the same question when possible.
+        // (Some notes < 60 show on bass, some >= 60 show on treble.)
+        if level.clefMode == .grand, n >= 2 {
+            let lowPool = poolInWindow.filter { $0 < 60 }
+            let highPool = poolInWindow.filter { $0 >= 60 }
+
+            if !lowPool.isEmpty, !highPool.isEmpty {
+                clipped.append(lowPool[Int.random(in: 0..<lowPool.count)])
+                clipped.append(highPool[Int.random(in: 0..<highPool.count)])
+                while clipped.count < n {
+                    clipped.append(poolInWindow[Int.random(in: 0..<poolInWindow.count)])
+                }
+            } else {
+                for _ in 0..<n {
+                    clipped.append(poolInWindow[Int.random(in: 0..<poolInWindow.count)])
+                }
+            }
+        } else {
+            for _ in 0..<n {
+                clipped.append(poolInWindow[Int.random(in: 0..<poolInWindow.count)])
+            }
         }
 
         targetPlaybackMidi = clipped.sorted() // low->high
@@ -304,7 +324,9 @@ final class EarTrainingViewModel: ObservableObject {
 
     private func pickOneOctaveWindow() -> ClosedRange<Int> {
         // Choose a 12-semitone window fully inside the level range.
-        // We step by octaves so the keyboard base stays musically familiar.
+        // Default: step by octaves so the keyboard base stays musically familiar (C-based windows).
+        // Grand staff special-case: prefer a window that STRADDLES middle C (60), so questions can
+        // contain both bass (<60) and treble (>=60) notes.
         let lo = level.midiRange.lowerBound
         let hi = level.midiRange.upperBound
         if hi - lo <= 11 {
@@ -313,6 +335,20 @@ final class EarTrainingViewModel: ObservableObject {
 
         let startMin = lo
         let startMax = hi - 11
+
+        if level.clefMode == .grand {
+            // Prefer any window where lowerBound < 60 <= upperBound.
+            // This may not be C-aligned; that's ok for this level.
+            let preferredStarts = Array(startMin...startMax).filter { s in
+                let e = s + 11
+                return s < 60 && e >= 60
+            }
+            if !preferredStarts.isEmpty {
+                let start = preferredStarts[Int.random(in: 0..<preferredStarts.count)]
+                return start...(start + 11)
+            }
+            // Fallback to C-aligned starts.
+        }
 
         // Align starts to C of an octave.
         var starts: [Int] = []
