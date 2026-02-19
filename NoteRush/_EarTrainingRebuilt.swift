@@ -633,55 +633,88 @@ struct EarTrainingStaffCard: View {
     var body: some View {
         GeometryReader { proxy in
             let layout = StaffLayout(size: proxy.size, mode: clefMode)
-            let metrics = layout.single.metrics
-            ZStack {
-                // staff background
-                StaffLinesView(metrics: metrics)
+            let slots = max(1, expectedCount)
 
-                let slots = max(1, expectedCount)
+            ZStack {
+                // Staff background
+                if clefMode == .grand {
+                    if let treble = layout.treble {
+                        ClefIconView(clef: .treble, metrics: treble.metrics, yOffset: treble.yOffset)
+                            .zIndex(-1)
+                        StaffLinesView(metrics: treble.metrics)
+                            .offset(y: treble.yOffset)
+                            .zIndex(0)
+                    }
+                    if let bass = layout.bass {
+                        ClefIconView(clef: .bass, metrics: bass.metrics, yOffset: bass.yOffset)
+                            .zIndex(-1)
+                        StaffLinesView(metrics: bass.metrics)
+                            .offset(y: bass.yOffset)
+                            .zIndex(0)
+                    }
+                } else if clefMode == .bass {
+                    ClefIconView(clef: .bass, metrics: layout.single.metrics, yOffset: 0)
+                        .zIndex(-1)
+                    StaffLinesView(metrics: layout.single.metrics)
+                        .zIndex(0)
+                } else {
+                    ClefIconView(clef: .treble, metrics: layout.single.metrics, yOffset: 0)
+                        .zIndex(-1)
+                    StaffLinesView(metrics: layout.single.metrics)
+                        .zIndex(0)
+                }
+
+                // slot positions across the staff width
+                let metricsForSlots = layout.single.metrics
                 let slotXs: [CGFloat] = (0..<slots).map { i in
                     let t = slots == 1 ? 0.5 : (CGFloat(i) / CGFloat(slots - 1))
-                    return metrics.leftMargin + (metrics.rightMargin - metrics.leftMargin) * t
+                    return metricsForSlots.leftMargin + (metricsForSlots.rightMargin - metricsForSlots.leftMargin) * t
                 }
 
                 // revealed answers (green)
                 ForEach(Array(targetMidi.prefix(revealedTargetCount).enumerated()), id: \ .offset) { idx, midi in
                     if let rendered = renderedNote(for: midi) {
+                        let slot = layout.slot(for: rendered.note.clef)
+                        let x = slotXs[min(idx, slotXs.count - 1)]
                         ZStack {
                             NoteGlyphView(
                                 note: rendered.note,
-                                metrics: metrics,
-                                xPosition: slotXs[min(idx, slotXs.count - 1)],
+                                metrics: slot.metrics,
+                                xPosition: x,
                                 color: CuteTheme.judgementCorrect,
-                                rhythm: .quarter
+                                rhythm: .quarter,
+                                yOffset: slot.yOffset
                             )
                             if rendered.showSharp {
                                 Text("#")
                                     .font(.system(size: 16, weight: .bold, design: .rounded))
                                     .foregroundColor(CuteTheme.judgementCorrect)
-                                    .position(x: slotXs[min(idx, slotXs.count - 1)] - 18, y: metrics.y(for: rendered.note.index))
+                                    .position(x: x - 18, y: slot.metrics.y(for: rendered.note.index) + slot.yOffset)
                             }
                         }
-                        .zIndex(0)
+                        .zIndex(1)
                     }
                 }
 
                 // user input (blue)
                 ForEach(Array(inputMidi.enumerated()), id: \ .offset) { idx, midi in
                     if let rendered = renderedNote(for: midi) {
+                        let slot = layout.slot(for: rendered.note.clef)
+                        let x = slotXs[min(idx, slotXs.count - 1)]
                         ZStack {
                             NoteGlyphView(
                                 note: rendered.note,
-                                metrics: metrics,
-                                xPosition: slotXs[min(idx, slotXs.count - 1)],
+                                metrics: slot.metrics,
+                                xPosition: x,
                                 color: CuteTheme.accent,
-                                rhythm: .quarter
+                                rhythm: .quarter,
+                                yOffset: slot.yOffset
                             )
                             if rendered.showSharp {
                                 Text("#")
                                     .font(.system(size: 16, weight: .bold, design: .rounded))
                                     .foregroundColor(CuteTheme.accent)
-                                    .position(x: slotXs[min(idx, slotXs.count - 1)] - 18, y: metrics.y(for: rendered.note.index))
+                                    .position(x: x - 18, y: slot.metrics.y(for: rendered.note.index) + slot.yOffset)
                             }
                         }
                         .zIndex(2)
@@ -692,6 +725,7 @@ struct EarTrainingStaffCard: View {
                     .fill(CuteTheme.judgementWrong.opacity(wrongFlashOpacity))
                     .cornerRadius(20)
                     .allowsHitTesting(false)
+                    .zIndex(20)
             }
         }
         .padding(12)
