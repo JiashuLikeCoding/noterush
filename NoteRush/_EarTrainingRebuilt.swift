@@ -150,9 +150,11 @@ final class EarTrainingViewModel: ObservableObject {
     @Published private(set) var level: EarTrainingLevel
     @Published var notesPerQuestion: Int = 1
 
-    // targetMidi: what the user should answer on the 1-octave keyboard (C4..B4)
+    // Keyboard: always 1 octave, but the octave will shift per-question to match targets.
+    @Published private(set) var keyboardBaseMidi: Int = 60 // C4
+
+    // Targets + playback are the same pitches (kept within one octave window).
     @Published private(set) var targetMidi: [Int] = []
-    // targetPlaybackMidi: the actual pitches we play (may span octaves depending on level range)
     @Published private(set) var targetPlaybackMidi: [Int] = []
 
     @Published private(set) var inputMidi: [Int] = []
@@ -187,17 +189,20 @@ final class EarTrainingViewModel: ObservableObject {
         revealedTargetCount = 0
         revealPulseMidi = nil
 
-        var out: [Int] = []
-        let pool = allowedMidiNotes
         let n = max(1, min(5, notesPerQuestion))
+
+        // Keep each question within ONE octave, and shift the on-screen keyboard octave to match.
+        let window = pickOneOctaveWindow()
+        keyboardBaseMidi = window.lowerBound
+
+        let poolInWindow = Array(window)
+        var clipped: [Int] = []
         for _ in 0..<n {
-            out.append(pool[Int.random(in: 0..<pool.count)])
+            clipped.append(poolInWindow[Int.random(in: 0..<poolInWindow.count)])
         }
 
-        // Audio can span octaves, but the on-screen keyboard is always one octave (C4..B4).
-        // So we normalize targets to that octave for both reveal and confirmation.
-        targetPlaybackMidi = out.sorted() // low->high
-        targetMidi = targetPlaybackMidi.map { normalizedMidiForKeyboard($0) }.sorted()
+        targetPlaybackMidi = clipped.sorted() // low->high
+        targetMidi = targetPlaybackMidi
 
         // Autoplay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
@@ -225,13 +230,11 @@ final class EarTrainingViewModel: ObservableObject {
                 self.revealedTargetCount = min(total, i + 1)
 
                 // Flash the key for THIS step (even if the midi repeats).
-                // Keyboard is 1-octave, so normalize to C4..B4.
-                let playbackMidi = self.targetPlaybackMidi[i]
-                let keyboardMidi = self.normalizedMidiForKeyboard(playbackMidi)
-                self.revealPulseMidi = keyboardMidi
+                let midi = self.targetPlaybackMidi[i]
+                self.revealPulseMidi = midi
                 self.revealPulseToken &+= 1
 
-                PianoSoundEngine.shared.play(midi: playbackMidi)
+                PianoSoundEngine.shared.play(midi: midi)
             }
         }
     }
@@ -298,10 +301,32 @@ final class EarTrainingViewModel: ObservableObject {
         }
     }
 
-    private func normalizedMidiForKeyboard(_ midi: Int) -> Int {
-        // Map any midi note to the on-screen keyboard octave (C4..B4 = 60..71)
-        let pc = (midi % 12 + 12) % 12
-        return 60 + pc
+    private func pickOneOctaveWindow() -> ClosedRange<Int> {
+        // Choose a 12-semitone window fully inside the level range.
+        // We step by octaves so the keyboard base stays musically familiar.
+        let lo = level.midiRange.lowerBound
+        let hi = level.midiRange.upperBound
+        if hi - lo <= 11 {
+            return lo...hi
+        }
+
+        let startMin = lo
+        let startMax = hi - 11
+
+        // Align starts to C of an octave.
+        var starts: [Int] = []
+        let firstC = (startMin / 12) * 12
+        var s = firstC
+        while s <= startMax {
+            if s >= startMin { starts.append(s) }
+            s += 12
+        }
+        if starts.isEmpty {
+            // Fallback: any start that fits.
+            return startMin...(startMin + 11)
+        }
+        let start = starts[Int.random(in: 0..<starts.count)]
+        return start...(start + 11)
     }
 
     // points-based progress (changes every correct)
@@ -484,6 +509,7 @@ struct EarTrainingView: View {
 
                 EarTrainingKeyboard(
                     namingMode: namingMode,
+                    baseMidi: viewModel.keyboardBaseMidi,
                     revealedMidi: Set(viewModel.targetMidi.prefix(viewModel.revealedTargetCount)),
                     pulseMidi: viewModel.revealPulseMidi,
                     pulseToken: viewModel.revealPulseToken,
@@ -717,6 +743,7 @@ struct EarTrainingStaffCard: View {
 
 struct EarTrainingKeyboard: View {
     let namingMode: NoteNamingMode
+    let baseMidi: Int
     let revealedMidi: Set<Int>
     let pulseMidi: Int?
     let pulseToken: Int
@@ -724,7 +751,7 @@ struct EarTrainingKeyboard: View {
 
     @State private var pressedId: String? = nil
 
-    // One octave C..B (C4..B4)
+    // One octave C..B
     private let whiteLetters: [NoteLetter] = [.c, .d, .e, .f, .g, .a, .b]
 
     private struct BlackKey {
@@ -737,11 +764,11 @@ struct EarTrainingKeyboard: View {
     // C#, D#, F#, G#, A#
     private var blackKeys: [BlackKey] {
         [
-            BlackKey(afterWhiteIndex: 0, labelLetters: "C#", labelSolfege: "Do#", midi: 61),
-            BlackKey(afterWhiteIndex: 1, labelLetters: "D#", labelSolfege: "Re#", midi: 63),
-            BlackKey(afterWhiteIndex: 3, labelLetters: "F#", labelSolfege: "Fa#", midi: 66),
-            BlackKey(afterWhiteIndex: 4, labelLetters: "G#", labelSolfege: "Sol#", midi: 68),
-            BlackKey(afterWhiteIndex: 5, labelLetters: "A#", labelSolfege: "La#", midi: 70),
+            BlackKey(afterWhiteIndex: 0, labelLetters: "C#", labelSolfege: "Do#", midi: baseMidi + 1),
+            BlackKey(afterWhiteIndex: 1, labelLetters: "D#", labelSolfege: "Re#", midi: baseMidi + 3),
+            BlackKey(afterWhiteIndex: 3, labelLetters: "F#", labelSolfege: "Fa#", midi: baseMidi + 6),
+            BlackKey(afterWhiteIndex: 4, labelLetters: "G#", labelSolfege: "Sol#", midi: baseMidi + 8),
+            BlackKey(afterWhiteIndex: 5, labelLetters: "A#", labelSolfege: "La#", midi: baseMidi + 10),
         ]
     }
 
@@ -853,13 +880,13 @@ struct EarTrainingKeyboard: View {
 
     private func midiForWhite(_ letter: NoteLetter) -> Int {
         switch letter {
-        case .c: return 60
-        case .d: return 62
-        case .e: return 64
-        case .f: return 65
-        case .g: return 67
-        case .a: return 69
-        case .b: return 71
+        case .c: return baseMidi + 0
+        case .d: return baseMidi + 2
+        case .e: return baseMidi + 4
+        case .f: return baseMidi + 5
+        case .g: return baseMidi + 7
+        case .a: return baseMidi + 9
+        case .b: return baseMidi + 11
         }
     }
 }
