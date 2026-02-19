@@ -254,6 +254,11 @@ final class EarTrainingViewModel: ObservableObject {
     }
 
     func revealAnswer() {
+        // Always clear user input when revealing the answer.
+        inputMidi = []
+        lastResultCorrect = nil
+        awaitingNextAfterCorrect = false
+
         let total = targetPlaybackMidi.count
         guard total > 0 else { return }
         revealedTargetCount = 0
