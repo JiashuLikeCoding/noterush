@@ -68,7 +68,11 @@ final class PianoSoundEngine {
                 bankLSB: 0
             )
         } else {
-            // Fallback: built-in GM soundbank.
+            // Fallback:
+            // - On macOS Simulator / macOS, we may have a system GM DLS.
+            // - On iOS devices, that path usually doesn't exist; still select program 0 (Acoustic Grand)
+            //   in the default melodic bank so we get a piano-ish timbre instead of a beep.
+            #if targetEnvironment(simulator)
             let url = URL(fileURLWithPath: "/System/Library/Components/CoreAudio.component/Contents/Resources/gs_instruments.dls")
             if FileManager.default.fileExists(atPath: url.path) {
                 try? sampler.loadSoundBankInstrument(
@@ -78,6 +82,14 @@ final class PianoSoundEngine {
                     bankLSB: 0
                 )
             }
+            #endif
+
+            sampler.sendProgramChange(
+                0,
+                bankMSB: UInt8(kAUSampler_DefaultMelodicBankMSB),
+                bankLSB: 0,
+                onChannel: 0
+            )
         }
 
         let session = AVAudioSession.sharedInstance()
@@ -286,8 +298,8 @@ struct EarTrainingSelectionCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             ZenCardHeader(
-                title: "听音训练",
-                subtitle: "练习听出音高并在键盘上作答",
+                title: "LISTEN",
+                subtitle: "Hear notes and answer on the keyboard",
                 symbol: "ear"
             )
             ZenDivider()
@@ -491,7 +503,7 @@ struct EarTrainingView: View {
                 }
             }
 
-            Text("听音训练")
+            Text("LISTEN")
                 .font(.system(size: 20, weight: .bold, design: .rounded))
                 .foregroundColor(CuteTheme.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .center)
