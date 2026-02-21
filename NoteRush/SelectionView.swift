@@ -92,6 +92,10 @@ struct SelectionView: View {
                         activeTab = .practiceNotes
                         withAnimation(.easeOut(duration: 0.18)) { showLobby = false }
                     },
+                    onPickLevel: {
+                        activeTab = .levels
+                        withAnimation(.easeOut(duration: 0.18)) { showLobby = false }
+                    },
                     onPickSong: {
                         activeTab = .songs
                         withAnimation(.easeOut(duration: 0.18)) { showLobby = false }
@@ -176,6 +180,7 @@ struct SelectionView: View {
 
 private struct SelectionLobby: View {
     let onPickPractice: () -> Void
+    let onPickLevel: () -> Void
     let onPickSong: () -> Void
     let onPickListen: () -> Void
 
@@ -210,6 +215,17 @@ private struct SelectionLobby: View {
             }
             .buttonStyle(.plain)
 
+            Button(action: onPickLevel) {
+                ModeCard(
+                    titleEN: "LEVEL",
+                    titleZH: "闯关",
+                    subtitle: "Challenges • Stars",
+                    tint: KidTheme.success,
+                    symbol: "flag.checkered"
+                )
+            }
+            .buttonStyle(.plain)
+
             Button(action: onPickSong) {
                 ModeCard(
                     titleEN: "SONG",
@@ -226,7 +242,7 @@ private struct SelectionLobby: View {
                     titleEN: "LISTEN",
                     titleZH: "听音训练",
                     subtitle: "Hear → Answer",
-                    tint: KidTheme.success,
+                    tint: KidTheme.primary,
                     symbol: "ear"
                 )
             }
