@@ -512,84 +512,112 @@ struct EarTrainingView: View {
     }
 
     var body: some View {
-        VStack(spacing: 10) {
-            topBar
+        VStack(spacing: 14) {
+            JellyTopBar(
+                titleEN: "LISTEN",
+                titleZH: "听音训练",
+                onBack: { dismiss() },
+                onSettings: { showSettings = true }
+            )
+            .padding(.top, 10)
 
-            VStack(spacing: 10) {
-                HStack(spacing: 10) {
-                    Button("播放") { viewModel.play() }
-                        .buttonStyle(SecondaryButtonStyle())
-                    Button("显示答案") { viewModel.revealAnswer() }
-                        .buttonStyle(SecondaryButtonStyle())
+            VStack(spacing: 14) {
+                JellyCard(tint: KidTheme.primary) {
+                    HStack(spacing: 10) {
+                        Button("播放") { viewModel.play() }
+                            .buttonStyle(JellyButtonStyle(kind: .secondary))
 
-                    if viewModel.awaitingNextAfterCorrect, viewModel.lastResultCorrect == true {
-                        Button("下一题") { viewModel.nextQuestion() }
-                            .buttonStyle(PrimaryButtonStyle())
+                        Button("显示答案") { viewModel.revealAnswer() }
+                            .buttonStyle(JellyButtonStyle(kind: .secondary))
+
+                        if viewModel.awaitingNextAfterCorrect, viewModel.lastResultCorrect == true {
+                            Button("下一题") { viewModel.nextQuestion() }
+                                .buttonStyle(JellyButtonStyle(kind: .primary))
+                        }
                     }
                 }
 
-                ControlCard {
+                JellyCard {
                     NamingModePicker(namingMode: $namingMode)
                 }
 
-                HStack(spacing: 8) {
-                    Text("一次听几个音")
-                        .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.caption))
-                        .foregroundColor(CuteTheme.textSecondary)
-                    Spacer()
-                    ForEach([1,2,3,4,5], id: \ .self) { n in
-                        Button(action: { viewModel.notesPerQuestion = n; viewModel.newQuestion() }) {
-                            Text("\(n)")
-                                .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.caption))
-                                .foregroundColor(viewModel.notesPerQuestion == n ? .white : CuteTheme.textPrimary)
-                                .frame(width: 28, height: 26)
-                                .background(viewModel.notesPerQuestion == n ? CuteTheme.accent : CuteTheme.controlFill)
-                                .cornerRadius(8)
+                JellyCard {
+                    HStack(spacing: 10) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("一次听几个音")
+                                .font(.system(size: KidTheme.FontSize.caption, weight: .semibold, design: .rounded))
+                                .foregroundColor(KidTheme.textPrimary)
+                            Text("1–5 个")
+                                .font(.system(size: KidTheme.FontSize.tiny, weight: .medium, design: .rounded))
+                                .foregroundColor(KidTheme.textSecondary)
                         }
-                        .buttonStyle(.plain)
+
+                        Spacer()
+
+                        HStack(spacing: 8) {
+                            ForEach([1,2,3,4,5], id: \ .self) { n in
+                                Button(action: { viewModel.notesPerQuestion = n; viewModel.newQuestion() }) {
+                                    Text("\(n)")
+                                        .font(.system(size: KidTheme.FontSize.caption, weight: .heavy, design: .rounded))
+                                        .foregroundColor(viewModel.notesPerQuestion == n ? .white : KidTheme.textPrimary)
+                                        .frame(width: 34, height: 34)
+                                        .background(viewModel.notesPerQuestion == n ? KidTheme.primary : KidTheme.surfaceStrong)
+                                        .cornerRadius(12)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(KidTheme.border, lineWidth: 1)
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                     }
                 }
 
-                progressCard
+                JellyCard {
+                    progressKidCard
+                }
 
-                EarTrainingStaffCard(
-                    clefMode: level.clefMode,
-                    targetMidi: viewModel.targetPlaybackMidi,
-                    inputMidi: viewModel.inputMidi,
-                    revealedTargetCount: viewModel.revealedTargetCount,
-                    expectedCount: viewModel.targetMidi.count,
-                    wrongFlashTrigger: viewModel.wrongFlashTrigger
-                )
-                .frame(height: 260)
+                JellyCard {
+                    EarTrainingStaffCard(
+                        clefMode: level.clefMode,
+                        targetMidi: viewModel.targetPlaybackMidi,
+                        inputMidi: viewModel.inputMidi,
+                        revealedTargetCount: viewModel.revealedTargetCount,
+                        expectedCount: viewModel.targetMidi.count,
+                        wrongFlashTrigger: viewModel.wrongFlashTrigger
+                    )
+                    .frame(height: 260)
+                }
 
-                EarTrainingKeyboard(
-                    namingMode: namingMode,
-                    baseMidi: viewModel.keyboardBaseMidi,
-                    revealedMidi: Set(viewModel.targetPlaybackMidi.prefix(viewModel.revealedTargetCount)),
-                    pulseMidi: viewModel.revealPulseMidi,
-                    pulseToken: viewModel.revealPulseToken,
-                    onTapMidi: { viewModel.addInput(midi: $0) }
-                )
-                // Fill remaining space, but clamp max height so it stays piano-like.
-                .frame(minHeight: 220, maxHeight: 260)
-                .layoutPriority(1)
-                .padding(.horizontal, 12)
+                JellyCard {
+                    EarTrainingKeyboard(
+                        namingMode: namingMode,
+                        baseMidi: viewModel.keyboardBaseMidi,
+                        revealedMidi: Set(viewModel.targetPlaybackMidi.prefix(viewModel.revealedTargetCount)),
+                        pulseMidi: viewModel.revealPulseMidi,
+                        pulseToken: viewModel.revealPulseToken,
+                        onTapMidi: { viewModel.addInput(midi: $0) }
+                    )
+                    .frame(minHeight: 220, maxHeight: 260)
+                    .layoutPriority(1)
+                }
+                .padding(.horizontal, 2)
 
-                Spacer(minLength: 30)
-
-                HStack {
-                    Button("⌫") { viewModel.backspace() }
-                        .buttonStyle(SecondaryButtonStyle())
-                    Button("清空") { viewModel.clear() }
-                        .buttonStyle(SecondaryButtonStyle())
+                JellyCard {
+                    HStack(spacing: 12) {
+                        Button("⌫") { viewModel.backspace() }
+                            .buttonStyle(JellyButtonStyle(kind: .secondary))
+                        Button("清空") { viewModel.clear() }
+                            .buttonStyle(JellyButtonStyle(kind: .secondary))
+                    }
                 }
             }
             .padding(.horizontal, 16)
 
-            Spacer(minLength: 10)
+            Spacer(minLength: 8)
         }
-        .padding(.top, 10)
-        .zenBackground()
+        .kidBackground()
         .onAppear {
             // Reset progress every time entering a level.
             viewModel.resetProgressOnEnter()
@@ -599,78 +627,39 @@ struct EarTrainingView: View {
         }
     }
 
-    private var topBar: some View {
-        ZStack {
+    private var progressKidCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(CuteTheme.textPrimary)
-                        .frame(width: 36, height: 36)
-                        .background(CuteTheme.controlFill)
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(CuteTheme.controlBorder, lineWidth: 1)
-                        )
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("PROGRESS")
+                        .font(.system(size: KidTheme.FontSize.caption, weight: .heavy, design: .rounded))
+                        .foregroundColor(KidTheme.textPrimary)
+                    Text("完成进度")
+                        .font(.system(size: KidTheme.FontSize.tiny, weight: .semibold, design: .rounded))
+                        .foregroundColor(KidTheme.textSecondary)
                 }
 
                 Spacer()
 
-                Button(action: { showSettings = true }) {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(CuteTheme.textPrimary)
-                        .frame(width: 36, height: 36)
-                        .background(CuteTheme.controlFill)
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(CuteTheme.controlBorder, lineWidth: 1)
-                        )
-                }
-            }
-
-            Text("LISTEN")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundColor(CuteTheme.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .center)
-        }
-        .padding(.horizontal, 16)
-    }
-
-    private var progressCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("完成进度")
-                    .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.caption))
-                    .foregroundColor(CuteTheme.textPrimary)
-                Spacer()
                 Text("\(viewModel.progressPointsEarned)/\(viewModel.progressTotalPoints)")
-                    .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.caption))
-                    .foregroundColor(CuteTheme.textSecondary)
+                    .font(.system(size: KidTheme.FontSize.caption, weight: .semibold, design: .rounded))
+                    .foregroundColor(KidTheme.textSecondary)
             }
+
             ProgressView(value: viewModel.progressFraction)
-                .tint(viewModel.isLevelCompleted ? CuteTheme.feedbackSuccess : CuteTheme.accent)
+                .tint(viewModel.isLevelCompleted ? KidTheme.success : KidTheme.primary)
 
             if viewModel.isLevelCompleted {
                 let pct = Int((viewModel.completionAccuracy * 100).rounded())
-                Text("完成！正确率 \(pct)%（同一个音重复错误不累计）")
-                    .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.caption))
-                    .foregroundColor(CuteTheme.textSecondary)
+                Text("完成！正确率 \(pct)%")
+                    .font(.system(size: KidTheme.FontSize.caption, weight: .semibold, design: .rounded))
+                    .foregroundColor(KidTheme.textSecondary)
             } else {
-                Text("每个音需正确2次")
-                    .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.caption))
-                    .foregroundColor(CuteTheme.textSecondary)
+                Text("每个音需正确 2 次")
+                    .font(.system(size: KidTheme.FontSize.caption, weight: .medium, design: .rounded))
+                    .foregroundColor(KidTheme.textSecondary)
             }
         }
-        .padding(12)
-        .background(CuteTheme.cardBackground)
-        .cornerRadius(14)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(CuteTheme.cardBorder, lineWidth: 1)
-        )
     }
 }
 
