@@ -284,17 +284,7 @@ private struct ModeCard: View {
                             .font(.system(size: KidTheme.FontSize.title, weight: .heavy, design: .rounded))
                             .foregroundColor(KidTheme.textPrimary)
 
-                        Text(titleZH)
-                            .font(.system(size: KidTheme.FontSize.caption, weight: .semibold, design: .rounded))
-                            .foregroundColor(KidTheme.textSecondary)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(KidTheme.surfaceStrong.opacity(0.75))
-                            .cornerRadius(KidTheme.Radius.chip)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: KidTheme.Radius.chip)
-                                    .stroke(KidTheme.border, lineWidth: 1)
-                            )
+                        JellyPill(text: titleZH, tint: tint)
                     }
 
                     Text(subtitle)
@@ -309,6 +299,88 @@ private struct ModeCard: View {
                     .foregroundColor(KidTheme.textSecondary)
             }
         }
+    }
+}
+
+private struct JellyPill: View {
+    let text: LocalizedStringKey
+    let tint: Color
+
+    init(text: String, tint: Color) {
+        self.text = LocalizedStringKey(text)
+        self.tint = tint
+    }
+
+    init(text: LocalizedStringKey, tint: Color) {
+        self.text = text
+        self.tint = tint
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: KidTheme.FontSize.caption, weight: .semibold, design: .rounded))
+            .foregroundColor(KidTheme.textPrimary.opacity(0.85))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(tint.opacity(0.10))
+            .cornerRadius(KidTheme.Radius.chip)
+            .overlay(
+                RoundedRectangle(cornerRadius: KidTheme.Radius.chip)
+                    .stroke(KidTheme.border, lineWidth: 1)
+            )
+    }
+}
+
+private struct JellySectionHeader: View {
+    let titleEN: String
+    let titleZH: String
+    let symbol: String
+    let tint: Color
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(tint.opacity(0.14))
+                    .frame(width: 40, height: 40)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(KidTheme.border, lineWidth: 1)
+                    )
+                Image(systemName: symbol)
+                    .font(.system(size: 16, weight: .heavy))
+                    .foregroundColor(tint)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(titleEN.uppercased())
+                    .font(.system(size: KidTheme.FontSize.title, weight: .heavy, design: .rounded))
+                    .foregroundColor(KidTheme.textPrimary)
+                Text(titleZH)
+                    .font(.system(size: KidTheme.FontSize.caption, weight: .semibold, design: .rounded))
+                    .foregroundColor(KidTheme.textSecondary)
+            }
+
+            Spacer()
+        }
+    }
+}
+
+private struct JellyLetterChip: View {
+    let title: String
+    let isSelected: Bool
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: KidTheme.FontSize.caption, weight: .heavy, design: .rounded))
+            .foregroundColor(isSelected ? .white : KidTheme.textPrimary)
+            .frame(maxWidth: .infinity, minHeight: 34)
+            .background(isSelected ? KidTheme.primary : KidTheme.surfaceStrong)
+            .cornerRadius(14)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(KidTheme.border, lineWidth: 1)
+            )
     }
 }
 
@@ -769,70 +841,67 @@ struct PracticeNotesCard: View {
     let onStart: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            ZenCardHeader(
-                title: "Card.FreePractice.Title",
-                subtitle: "Card.FreePractice.Subtitle",
-                symbol: "waveform.path"
-            )
-
-            ZenDivider()
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Clef.Title")
-                    .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.body))
-                    .foregroundColor(CuteTheme.textSecondary)
-
-                let clefBinding = Binding<StaffClefMode>(
-                    get: { StaffClefMode(rawValue: freePracticeClefModeRaw) ?? .treble },
-                    set: { newMode in
-                        freePracticeClefModeRaw = newMode.rawValue
-                        selectedLevel = nil
-                    }
+        JellyCard(tint: KidTheme.primary) {
+            VStack(alignment: .leading, spacing: 14) {
+                JellySectionHeader(
+                    titleEN: "PRACTICE",
+                    titleZH: "自由练习",
+                    symbol: "music.quarternote.3",
+                    tint: KidTheme.primary
                 )
-                ZenClefPicker(selection: clefBinding)
-                    .frame(maxWidth: .infinity)
-            }
 
-            ZenDivider()
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("谱号")
+                        .font(.system(size: KidTheme.FontSize.caption, weight: .semibold, design: .rounded))
+                        .foregroundColor(KidTheme.textSecondary)
 
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Training Notes")
-                    .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.body))
-                    .foregroundColor(CuteTheme.textSecondary)
-
-                let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 7)
-                LazyVGrid(columns: columns, spacing: 8) {
-                    ForEach(NoteLetter.allCases, id: \.self) { letter in
-                        Button(action: { toggle(letter) }) {
-                            ZenLetterChip(
-                                title: letter.displayName(for: namingMode),
-                                isSelected: selectedLetters.contains(letter)
-                            )
+                    let clefBinding = Binding<StaffClefMode>(
+                        get: { StaffClefMode(rawValue: freePracticeClefModeRaw) ?? .treble },
+                        set: { newMode in
+                            freePracticeClefModeRaw = newMode.rawValue
+                            selectedLevel = nil
                         }
-                        .buttonStyle(.plain)
+                    )
+                    ZenClefPicker(selection: clefBinding)
+                        .frame(maxWidth: .infinity)
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("训练音")
+                        .font(.system(size: KidTheme.FontSize.caption, weight: .semibold, design: .rounded))
+                        .foregroundColor(KidTheme.textSecondary)
+
+                    let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 7)
+                    LazyVGrid(columns: columns, spacing: 8) {
+                        ForEach(NoteLetter.allCases, id: \.self) { letter in
+                            Button(action: { toggle(letter) }) {
+                                JellyLetterChip(
+                                    title: letter.displayName(for: namingMode),
+                                    isSelected: selectedLetters.contains(letter)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                 }
-            }
 
-            if selectedLetters.isEmpty {
-                Text("Select at least one note to start.")
-                    .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.caption))
-                    .foregroundColor(.red.opacity(0.7))
-            }
+                if selectedLetters.isEmpty {
+                    Text("请选择至少一个音")
+                        .font(.system(size: KidTheme.FontSize.caption, weight: .semibold, design: .rounded))
+                        .foregroundColor(KidTheme.danger)
+                }
 
-            Button(action: {
-                selectedLevel = nil
-                onStart()
-            }) {
-                Text("Start Practice")
-                    .frame(maxWidth: .infinity)
+                Button(action: {
+                    selectedLevel = nil
+                    onStart()
+                }) {
+                    Text("开始练习")
+                }
+                .buttonStyle(JellyButtonStyle(kind: .primary))
+                .disabled(selectedLetters.isEmpty)
+                .opacity(selectedLetters.isEmpty ? 0.5 : 1)
             }
-            .buttonStyle(PrimaryButtonStyle())
-            .disabled(selectedLetters.isEmpty)
-            .opacity(selectedLetters.isEmpty ? 0.5 : 1)
         }
-        .cardStyle()
     }
 
     private func toggle(_ letter: NoteLetter) {
@@ -852,30 +921,32 @@ struct LevelSelectionCard: View {
     let onStart: (PracticeLevel) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            ZenCardHeader(
-                title: "Practice Levels",
-                subtitle: "Card.Levels.Subtitle",
-                symbol: "list.bullet.rectangle"
-            )
+        JellyCard(tint: KidTheme.success) {
+            VStack(alignment: .leading, spacing: 14) {
+                JellySectionHeader(
+                    titleEN: "LEVEL",
+                    titleZH: "闯关",
+                    symbol: "flag.checkered",
+                    tint: KidTheme.success
+                )
 
-            VStack(spacing: 10) {
-                ForEach(PracticeLevel.library) { level in
-                    Button(action: { apply(level) }) {
-                        LevelCardView(
-                            level: level,
-                            isSelected: selectedLevel?.id == level.id,
-                            onStart: {
-                                apply(level)
-                                onStart(level)
-                            }
-                        )
+                VStack(spacing: 12) {
+                    ForEach(PracticeLevel.library) { level in
+                        Button(action: { apply(level) }) {
+                            LevelCardView(
+                                level: level,
+                                isSelected: selectedLevel?.id == level.id,
+                                onStart: {
+                                    apply(level)
+                                    onStart(level)
+                                }
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
-        .cardStyle()
     }
 
     private func apply(_ level: PracticeLevel) {
@@ -891,55 +962,51 @@ struct LevelCardView: View {
     let onStart: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(CuteTheme.controlFill)
-                        .frame(width: 44, height: 44)
-                        .overlay(
-                            Circle()
-                                .stroke(CuteTheme.controlBorder, lineWidth: 1)
-                        )
-                    Text("L\(level.id)")
-                        .font(.custom("AvenirNext-DemiBold", size: 14))
-                        .foregroundColor(CuteTheme.textPrimary)
+        JellyCard(tint: isSelected ? KidTheme.primary : nil) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(KidTheme.surfaceStrong)
+                            .frame(width: 44, height: 44)
+                            .overlay(
+                                Circle()
+                                    .stroke(KidTheme.border, lineWidth: 1)
+                            )
+                        Text("L\(level.id)")
+                            .font(.system(size: 14, weight: .heavy, design: .rounded))
+                            .foregroundColor(KidTheme.textPrimary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(level.titleKey)
+                            .font(.system(size: KidTheme.FontSize.body, weight: .heavy, design: .rounded))
+                            .foregroundColor(KidTheme.textPrimary)
+                        Text(level.subtitleKey)
+                            .font(.system(size: KidTheme.FontSize.caption, weight: .medium, design: .rounded))
+                            .foregroundColor(KidTheme.textSecondary)
+                    }
+
+                    Spacer()
+
+                    JellyPill(text: level.rhythm.displayNameKey, tint: KidTheme.accent)
                 }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(level.titleKey)
-                        .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.body))
-                        .foregroundColor(CuteTheme.textPrimary)
-                    Text(level.subtitleKey)
-                        .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.caption))
-                        .foregroundColor(CuteTheme.textSecondary)
+                HStack(spacing: 8) {
+                    ForEach(level.rangeTags.indices, id: \.self) { idx in
+                        JellyPill(text: level.rangeTags[idx], tint: KidTheme.primary)
+                    }
                 }
-                Spacer()
-                ZenMetaTag {
-                    Text(level.rhythm.displayNameKey)
-                }
-            }
 
-            HStack(spacing: 6) {
-                ForEach(level.rangeTags.indices, id: \.self) { idx in
-                    NoteChipView(
-                        title: level.rangeTags[idx],
-                        isSelected: false,
-                        isDimmed: true
-                    )
+                Button(action: onStart) {
+                    Text("开始")
                 }
+                .buttonStyle(JellyButtonStyle(kind: .primary))
             }
-
-            Button(action: onStart) {
-                Text("Start")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(ZenActionButtonStyle())
         }
-        .cardStyle()
         .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(isSelected ? CuteTheme.accent : Color.clear, lineWidth: 2)
+            RoundedRectangle(cornerRadius: KidTheme.Radius.card)
+                .stroke(isSelected ? KidTheme.primary : Color.clear, lineWidth: 2)
         )
     }
 }
