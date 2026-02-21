@@ -33,7 +33,10 @@ struct SelectionView: View {
     @Binding var activeTab: SelectionTab
     let onStartPractice: () -> Void
     let onStartSong: (SongTemplate, Set<NoteLetter>, StaffClefMode) -> Void
+
+    // New kid-friendly lobby flow (screen-by-screen migration).
     @State private var showingSettings: Bool = false
+    @State private var showLobby: Bool = true
 
     @StateObject private var midiMonitor = MidiDeviceMonitor()
     @State private var showMidiDetectedAlert: Bool = false
@@ -56,20 +59,52 @@ struct SelectionView: View {
     @State private var songTargetLetters: [UUID: Set<NoteLetter>] = [:]
 
     var body: some View {
-        VStack(spacing: 16) {
-            SelectionHeaderView(
-                showingSettings: showingSettings,
-                onToggleSettings: { showingSettings.toggle() }
+        VStack(spacing: 14) {
+            JellyTopBar(
+                titleEN: showLobby ? "HOME" : titleEN(for: activeTab),
+                titleZH: showLobby ? "开始" : titleZH(for: activeTab),
+                onBack: (showLobby || showingSettings) ? nil : { withAnimation(.easeOut(duration: 0.18)) { showLobby = true } },
+                onSettings: { showingSettings.toggle() }
             )
+            .padding(.top, 10)
 
-            if !showingSettings {
-                SelectionTabBar(activeTab: $activeTab)
-                    .padding(.horizontal, 20)
-            }
-
-            ScrollView {
-                VStack(spacing: 18) {
-                    if !showingSettings {
+            if showingSettings {
+                ScrollView {
+                    AppSettingsCard(
+                        soundEnabled: $soundEnabled,
+                        appLanguageRaw: $appLanguageRaw,
+                        appThemeRaw: $appThemeRaw,
+                        showNoteName: $showNoteName,
+                        showJudgementNoteName: $showJudgementNoteName,
+                        useColoredKeys: $useColoredKeys,
+                        useColoredNotes: $useColoredNotes,
+                        noteDisplayRhythmModeRaw: $noteDisplayRhythmModeRaw,
+                        microphoneInputEnabled: $microphoneInputEnabled,
+                        midiInputEnabled: $midiInputEnabled,
+                        inputModeRaw: $inputModeRaw
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
+                }
+            } else if showLobby {
+                SelectionLobby(
+                    onPickPractice: {
+                        activeTab = .practiceNotes
+                        withAnimation(.easeOut(duration: 0.18)) { showLobby = false }
+                    },
+                    onPickSong: {
+                        activeTab = .songs
+                        withAnimation(.easeOut(duration: 0.18)) { showLobby = false }
+                    },
+                    onPickListen: {
+                        activeTab = .earTraining
+                        withAnimation(.easeOut(duration: 0.18)) { showLobby = false }
+                    }
+                )
+                .padding(.horizontal, 16)
+            } else {
+                ScrollView {
+                    VStack(spacing: 16) {
                         switch activeTab {
                         case .practiceNotes:
                             PracticeNotesCard(
@@ -102,31 +137,25 @@ struct SelectionView: View {
                         case .earTraining:
                             EarTrainingSelectionCard(namingMode: $namingMode)
                         }
-                    } else {
-                        AppSettingsCard(
-                            soundEnabled: $soundEnabled,
-                            appLanguageRaw: $appLanguageRaw,
-                            appThemeRaw: $appThemeRaw,
-                            showNoteName: $showNoteName,
-                            showJudgementNoteName: $showJudgementNoteName,
-                            useColoredKeys: $useColoredKeys,
-                            useColoredNotes: $useColoredNotes,
-                            noteDisplayRhythmModeRaw: $noteDisplayRhythmModeRaw,
-                            microphoneInputEnabled: $microphoneInputEnabled,
-                            midiInputEnabled: $midiInputEnabled,
-                            inputModeRaw: $inputModeRaw
-                        )
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
             }
+
+            Spacer(minLength: 0)
         }
-        .padding(.top, 16)
-        .zenBackground()
+        .kidBackground()
         .onAppear {
             midiMonitor.start()
             lastHadMidiSources = midiMonitor.hasSources
+        }
+        .onChange(of: showingSettings) { isShowing in
+            // When opening settings, stay on current screen; when closing settings, return to lobby.
+            if !isShowing {
+                // Keep last selected tab but return to lobby so the app feels like a game hub.
+                showLobby = true
+            }
         }
         .onChange(of: midiMonitor.hasSources) { hasSources in
             // Only alert on transition: no -> yes
@@ -143,65 +172,149 @@ struct SelectionView: View {
     }
 }
 
-struct SelectionTabBar: View {
-    @Binding var activeTab: SelectionTab
+// MARK: - Kid Lobby
+
+private struct SelectionLobby: View {
+    let onPickPractice: () -> Void
+    let onPickSong: () -> Void
+    let onPickListen: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            ForEach(SelectionTab.allCases) { tab in
-                Button(action: { activeTab = tab }) {
-                    VStack(spacing: 6) {
-                        Text(tab.titleKey)
-                            .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.body))
-                            .foregroundColor(activeTab == tab ? CuteTheme.textPrimary : CuteTheme.textSecondary)
-                        Rectangle()
-                            .fill(activeTab == tab ? CuteTheme.accent : Color.clear)
-                            .frame(height: 2)
-                            .cornerRadius(1)
-                    }
-                    .frame(maxWidth: .infinity)
+        VStack(spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("PICK A MODE")
+                        .font(.system(size: KidTheme.FontSize.hero, weight: .heavy, design: .rounded))
+                        .foregroundColor(KidTheme.textPrimary)
+                    Text("选择一个模式开始")
+                        .font(.system(size: KidTheme.FontSize.caption, weight: .semibold, design: .rounded))
+                        .foregroundColor(KidTheme.textSecondary)
                 }
-                .buttonStyle(.plain)
+
+                Spacer()
+
+                JellyNoteSprite(mood: .idle)
+                    .frame(width: 54, height: 54)
+                    .opacity(0.95)
+            }
+            .padding(.top, 6)
+
+            Button(action: onPickPractice) {
+                ModeCard(
+                    titleEN: "PRACTICE",
+                    titleZH: "练习",
+                    subtitle: "Notes • Speed • Levels",
+                    tint: KidTheme.primary,
+                    symbol: "music.quarternote.3"
+                )
+            }
+            .buttonStyle(.plain)
+
+            Button(action: onPickSong) {
+                ModeCard(
+                    titleEN: "SONG",
+                    titleZH: "歌曲",
+                    subtitle: "Play real melodies",
+                    tint: KidTheme.accent,
+                    symbol: "music.note.list"
+                )
+            }
+            .buttonStyle(.plain)
+
+            Button(action: onPickListen) {
+                ModeCard(
+                    titleEN: "LISTEN",
+                    titleZH: "听音训练",
+                    subtitle: "Hear → Answer",
+                    tint: KidTheme.success,
+                    symbol: "ear"
+                )
+            }
+            .buttonStyle(.plain)
+
+            Spacer(minLength: 8)
+        }
+        .padding(.top, 2)
+    }
+}
+
+private struct ModeCard: View {
+    let titleEN: String
+    let titleZH: String
+    let subtitle: String
+    let tint: Color
+    let symbol: String
+
+    var body: some View {
+        JellyCard(tint: tint) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(tint.opacity(0.14))
+                        .frame(width: 56, height: 56)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(KidTheme.border, lineWidth: 1)
+                        )
+
+                    Image(systemName: symbol)
+                        .font(.system(size: 22, weight: .heavy))
+                        .foregroundColor(tint)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text(titleEN)
+                            .font(.system(size: KidTheme.FontSize.title, weight: .heavy, design: .rounded))
+                            .foregroundColor(KidTheme.textPrimary)
+
+                        Text(titleZH)
+                            .font(.system(size: KidTheme.FontSize.caption, weight: .semibold, design: .rounded))
+                            .foregroundColor(KidTheme.textSecondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(KidTheme.surfaceStrong.opacity(0.75))
+                            .cornerRadius(KidTheme.Radius.chip)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: KidTheme.Radius.chip)
+                                    .stroke(KidTheme.border, lineWidth: 1)
+                            )
+                    }
+
+                    Text(subtitle)
+                        .font(.system(size: KidTheme.FontSize.caption, weight: .medium, design: .rounded))
+                        .foregroundColor(KidTheme.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(KidTheme.textSecondary)
             }
         }
     }
 }
 
-struct SelectionHeaderView: View {
-    let showingSettings: Bool
-    let onToggleSettings: () -> Void
+// MARK: - Tab title mapping
 
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                let titleKey: LocalizedStringKey = showingSettings ? "Settings" : "Session Setup"
-                Text(titleKey)
-                    .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.title))
-                    .foregroundColor(CuteTheme.textPrimary)
-
-                let subtitleKey: LocalizedStringKey = showingSettings
-                    ? "Selection.Header.SettingsSubtitle"
-                    : "Selection.Header.SetupSubtitle"
-                Text(subtitleKey)
-                    .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.caption))
-                    .foregroundColor(CuteTheme.textSecondary)
-            }
-            Spacer()
-            Button(action: onToggleSettings) {
-                Image(systemName: showingSettings ? "xmark" : "gearshape")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(CuteTheme.textPrimary)
-                    .frame(width: 36, height: 36)
-                    .background(CuteTheme.controlFill)
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(CuteTheme.controlBorder, lineWidth: 1)
-                    )
-            }
-            .accessibilityLabel(showingSettings ? LocalizedStringKey("Close settings") : LocalizedStringKey("Open settings"))
+private extension SelectionView {
+    func titleEN(for tab: SelectionTab) -> String {
+        switch tab {
+        case .practiceNotes: return "PRACTICE"
+        case .songs: return "SONG"
+        case .levels: return "LEVEL"
+        case .earTraining: return "LISTEN"
         }
-        .padding(.horizontal, 20)
+    }
+
+    func titleZH(for tab: SelectionTab) -> String {
+        switch tab {
+        case .practiceNotes: return "练习"
+        case .songs: return "歌曲"
+        case .levels: return "闯关"
+        case .earTraining: return "听音训练"
+        }
     }
 }
 
