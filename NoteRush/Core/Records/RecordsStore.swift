@@ -4,7 +4,7 @@ import Combine
 
 // MARK: - Records
 
-enum TrainingModeRecord: String, CaseIterable, Identifiable {
+enum TrainingModeRecord: String, CaseIterable, Identifiable, Codable {
     case levels
     case listen
     case songs
@@ -48,15 +48,47 @@ struct RecordsDayStats: Codable, Hashable {
     }
 }
 
+struct RecordsSession: Codable, Identifiable, Hashable {
+    var id: UUID
+    var mode: TrainingModeRecord
+    var startedAt: Date
+    var endedAt: Date?
+    var answered: Int
+    var correct: Int
+    var seconds: Int
+
+    init(id: UUID = UUID(), mode: TrainingModeRecord, startedAt: Date = Date()) {
+        self.id = id
+        self.mode = mode
+        self.startedAt = startedAt
+        self.endedAt = nil
+        self.answered = 0
+        self.correct = 0
+        self.seconds = 0
+    }
+
+    var accuracy: Double {
+        guard answered > 0 else { return 0 }
+        return Double(correct) / Double(answered)
+    }
+}
+
 final class RecordsStore: ObservableObject {
     static let shared = RecordsStore()
 
-    private let storageKey = "records.v1"
+    private let storageKey = "records.v1" // aggregated by day
+    private let sessionsKey = "records.sessions.v1" // session-level
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
     /// modeRaw -> yyyy-MM-dd -> stats
     @Published private(set) var days: [String: [String: RecordsDayStats]] = [:]
+
+    /// session list (source of truth)
+    @Published private(set) var sessions: [RecordsSession] = []
+
+    /// modeRaw -> active session id
+    private var activeSessionIds: [String: UUID] = [:]
 
     private init() {
         load()
@@ -64,26 +96,77 @@ final class RecordsStore: ObservableObject {
 
     // MARK: - Public API
 
+    @discardableResult
+    func startSession(mode: TrainingModeRecord, startedAt: Date = Date()) -> UUID {
+        let session = RecordsSession(mode: mode, startedAt: startedAt)
+        sessions.append(session)
+        activeSessionIds[mode.rawValue] = session.id
+        recomputeDaysFromSessions()
+        save()
+        return session.id
+    }
+
+    func endSession(mode: TrainingModeRecord, endedAt: Date = Date()) {
+        guard let id = activeSessionIds[mode.rawValue] else { return }
+        if let idx = sessions.lastIndex(where: { $0.id == id }) {
+            if sessions[idx].endedAt == nil {
+                sessions[idx].endedAt = endedAt
+            }
+        }
+        activeSessionIds[mode.rawValue] = nil
+        recomputeDaysFromSessions()
+        save()
+    }
+
     func logAnswer(mode: TrainingModeRecord, correct: Bool, date: Date = Date()) {
-        let key = dateKey(for: date)
-        var modeDays = days[mode.rawValue, default: [:]]
-        var stats = modeDays[key] ?? RecordsDayStats()
-        stats.answered += 1
-        if correct { stats.correct += 1 }
-        modeDays[key] = stats
-        days[mode.rawValue] = modeDays
+        // Prefer writing into the active session.
+        if let id = activeSessionIds[mode.rawValue], let idx = sessions.lastIndex(where: { $0.id == id }) {
+            sessions[idx].answered += 1
+            if correct { sessions[idx].correct += 1 }
+        } else {
+            // Fallback: create an implicit session so the day is still counted.
+            let implicitId = startSession(mode: mode, startedAt: date)
+            if let idx = sessions.lastIndex(where: { $0.id == implicitId }) {
+                sessions[idx].answered += 1
+                if correct { sessions[idx].correct += 1 }
+                sessions[idx].endedAt = date
+            }
+        }
+
+        recomputeDaysFromSessions()
         save()
     }
 
     func addSeconds(mode: TrainingModeRecord, seconds: Int, date: Date = Date()) {
         guard seconds > 0 else { return }
-        let key = dateKey(for: date)
-        var modeDays = days[mode.rawValue, default: [:]]
-        var stats = modeDays[key] ?? RecordsDayStats()
-        stats.seconds += seconds
-        modeDays[key] = stats
-        days[mode.rawValue] = modeDays
+
+        if let id = activeSessionIds[mode.rawValue], let idx = sessions.lastIndex(where: { $0.id == id }) {
+            sessions[idx].seconds += seconds
+        } else {
+            // If we only have time, create an implicit session.
+            let implicitId = startSession(mode: mode, startedAt: date)
+            if let idx = sessions.lastIndex(where: { $0.id == implicitId }) {
+                sessions[idx].seconds += seconds
+                sessions[idx].endedAt = date
+            }
+        }
+
+        recomputeDaysFromSessions()
         save()
+    }
+
+    func deleteSession(id: UUID) {
+        sessions.removeAll { $0.id == id }
+        activeSessionIds = activeSessionIds.filter { $0.value != id }
+        recomputeDaysFromSessions()
+        save()
+    }
+
+    func sessions(on date: Date) -> [RecordsSession] {
+        let key = dateKey(for: date)
+        return sessions
+            .filter { dateKey(for: $0.startedAt) == key }
+            .sorted { ($0.startedAt) > ($1.startedAt) }
     }
 
     func stats(mode: TrainingModeRecord, date: Date) -> RecordsDayStats {
@@ -164,24 +247,59 @@ final class RecordsStore: ObservableObject {
     // MARK: - Persistence
 
     private func load() {
-        guard let data = UserDefaults.standard.data(forKey: storageKey) else {
-            days = [:]
-            return
+        // Sessions are the source of truth.
+        if let data = UserDefaults.standard.data(forKey: sessionsKey) {
+            do {
+                sessions = try decoder.decode([RecordsSession].self, from: data)
+            } catch {
+                sessions = []
+            }
+        } else {
+            sessions = []
         }
-        do {
-            days = try decoder.decode([String: [String: RecordsDayStats]].self, from: data)
-        } catch {
-            days = [:]
+
+        // Legacy days (v1) – keep as fallback only.
+        if sessions.isEmpty, let data = UserDefaults.standard.data(forKey: storageKey) {
+            do {
+                days = try decoder.decode([String: [String: RecordsDayStats]].self, from: data)
+            } catch {
+                days = [:]
+            }
+        } else {
+            recomputeDaysFromSessions()
         }
     }
 
     private func save() {
+        do {
+            let sessionsData = try encoder.encode(sessions)
+            UserDefaults.standard.set(sessionsData, forKey: sessionsKey)
+        } catch {
+            // ignore
+        }
+
+        // Also store aggregates for fast UI reads.
         do {
             let data = try encoder.encode(days)
             UserDefaults.standard.set(data, forKey: storageKey)
         } catch {
             // ignore
         }
+    }
+
+    private func recomputeDaysFromSessions() {
+        var next: [String: [String: RecordsDayStats]] = [:]
+        for s in sessions {
+            let key = dateKey(for: s.startedAt)
+            var modeDays = next[s.mode.rawValue, default: [:]]
+            var stats = modeDays[key] ?? RecordsDayStats()
+            stats.answered += s.answered
+            stats.correct += s.correct
+            stats.seconds += s.seconds
+            modeDays[key] = stats
+            next[s.mode.rawValue] = modeDays
+        }
+        days = next
     }
 
     private func dateKey(for date: Date) -> String {
@@ -206,6 +324,7 @@ struct RecordsSessionModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .onAppear {
+                RecordsStore.shared.startSession(mode: mode)
                 RecordsSessionClock.starts[mode.rawValue] = CACurrentMediaTime()
             }
             .onDisappear {
@@ -214,6 +333,7 @@ struct RecordsSessionModifier: ViewModifier {
                 RecordsSessionClock.starts[mode.rawValue] = nil
                 let seconds = max(0, Int((now - start).rounded()))
                 RecordsStore.shared.addSeconds(mode: mode, seconds: seconds)
+                RecordsStore.shared.endSession(mode: mode)
             }
     }
 }
