@@ -187,14 +187,9 @@ private struct HeatmapGrid: View {
     let mode: TrainingModeRecord
     let days: [(Date, RecordsDayStats)]
 
-    private func intensity(_ stats: RecordsDayStats) -> Double {
-        // Use answered as intensity driver.
-        let a = stats.answered
-        if a <= 0 { return 0 }
-        if a <= 3 { return 0.25 }
-        if a <= 8 { return 0.50 }
-        if a <= 15 { return 0.75 }
-        return 1.0
+    // “打卡”规则：每天训练超过 15 分钟（>= 900s）就算打卡一次。
+    private func checkedIn(_ stats: RecordsDayStats) -> Bool {
+        stats.seconds >= 15 * 60
     }
 
     var body: some View {
@@ -209,19 +204,20 @@ private struct HeatmapGrid: View {
         let columns = Array(repeating: GridItem(.flexible(minimum: 6, maximum: 20), spacing: 6), count: 13)
 
         VStack(alignment: .leading, spacing: 10) {
-            Text("最近 3 个月")
+            Text("最近 3 个月（打卡）")
                 .font(.system(size: 14, weight: .heavy, design: .rounded))
                 .foregroundColor(KidTheme.textOnCardPrimary)
 
             LazyVGrid(columns: columns, spacing: 6) {
                 ForEach(0..<91, id: \.self) { i in
                     let item = i < padded.count ? padded[i] : (nil, RecordsDayStats())
-                    let t = intensity(item.1)
+                    let ok = checkedIn(item.1)
+
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(t <= 0 ? Color.black.opacity(0.04) : KidTheme.primary.opacity(0.18 + 0.62 * t))
+                        .fill(ok ? KidTheme.accent.opacity(0.72) : Color.black.opacity(0.04))
                         .overlay(
                             RoundedRectangle(cornerRadius: 4)
-                                .stroke(t <= 0 ? Color.white.opacity(0.10) : KidTheme.primary.opacity(0.55), lineWidth: 1)
+                                .stroke(ok ? KidTheme.accent.opacity(0.90) : Color.white.opacity(0.10), lineWidth: 1)
                         )
                         .frame(height: 12)
                 }
