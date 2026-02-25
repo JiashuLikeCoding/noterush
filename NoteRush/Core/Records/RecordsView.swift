@@ -87,17 +87,18 @@ private struct ModePicker: View {
     var body: some View {
         HStack(spacing: 10) {
             ForEach(TrainingModeRecord.allCases) { m in
+                let isSelected = (mode == m)
                 Button(action: { mode = m }) {
                     Text(m.titleZH)
                         .font(.system(size: 14, weight: .heavy, design: .rounded))
-                        .foregroundColor(.white)
+                        .foregroundColor(isSelected ? KidTheme.textOnCardPrimary : KidTheme.textOnCardSecondary)
                         .padding(.vertical, 10)
                         .frame(maxWidth: .infinity)
-                        .background(mode == m ? Color.white.opacity(0.22) : Color.white.opacity(0.10))
+                        .background(isSelected ? KidTheme.primary.opacity(0.18) : Color.black.opacity(0.04))
                         .cornerRadius(14)
                         .overlay(
                             RoundedRectangle(cornerRadius: 14)
-                                .stroke(Color.white.opacity(mode == m ? 0.26 : 0.16), lineWidth: 1)
+                                .stroke(isSelected ? KidTheme.primary.opacity(0.55) : KidTheme.border, lineWidth: 1)
                         )
                 }
                 .buttonStyle(.plain)
@@ -112,17 +113,18 @@ private struct ScopePicker: View {
     var body: some View {
         HStack(spacing: 10) {
             ForEach(RecordsView.Scope.allCases) { s in
+                let isSelected = (scope == s)
                 Button(action: { scope = s }) {
                     Text(s.title)
                         .font(.system(size: 13, weight: .heavy, design: .rounded))
-                        .foregroundColor(.white)
+                        .foregroundColor(isSelected ? KidTheme.textOnCardPrimary : KidTheme.textOnCardSecondary)
                         .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
-                        .background(scope == s ? Color.white.opacity(0.20) : Color.white.opacity(0.10))
+                        .background(isSelected ? KidTheme.accent.opacity(0.16) : Color.black.opacity(0.04))
                         .cornerRadius(14)
                         .overlay(
                             RoundedRectangle(cornerRadius: 14)
-                                .stroke(Color.white.opacity(scope == s ? 0.26 : 0.16), lineWidth: 1)
+                                .stroke(isSelected ? KidTheme.accent.opacity(0.55) : KidTheme.border, lineWidth: 1)
                         )
                 }
                 .buttonStyle(.plain)
@@ -232,15 +234,27 @@ private struct DailyCharts: View {
                     x: .value("Date", p.date),
                     y: .value("Answered", p.answered)
                 )
-                .foregroundStyle(Color.white.opacity(0.22))
+                .foregroundStyle(KidTheme.primary.opacity(0.35))
 
                 LineMark(
                     x: .value("Date", p.date),
                     y: .value("Accuracy", p.accuracy)
                 )
-                .foregroundStyle(Color.white.opacity(0.85))
+                .foregroundStyle(KidTheme.textOnCardPrimary.opacity(0.95))
                 .lineStyle(StrokeStyle(lineWidth: 2))
                 .interpolationMethod(.catmullRom)
+            }
+            .chartXAxis {
+                AxisMarks { _ in
+                    AxisGridLine().foregroundStyle(Color.black.opacity(0.08))
+                    AxisValueLabel().foregroundStyle(KidTheme.textOnCardSecondary)
+                }
+            }
+            .chartYAxis {
+                AxisMarks { _ in
+                    AxisGridLine().foregroundStyle(Color.black.opacity(0.08))
+                    AxisValueLabel().foregroundStyle(KidTheme.textOnCardSecondary)
+                }
             }
             .chartYScale(domain: 0...max(1, (points.map { $0.answered }.max() ?? 1)))
             .frame(height: 160)
@@ -278,15 +292,27 @@ private struct MonthlyCharts: View {
                     x: .value("Month", p.monthStart, unit: .month),
                     y: .value("Answered", p.answered)
                 )
-                .foregroundStyle(Color.white.opacity(0.22))
+                .foregroundStyle(KidTheme.primary.opacity(0.35))
 
                 LineMark(
                     x: .value("Month", p.monthStart, unit: .month),
                     y: .value("Accuracy", p.accuracy)
                 )
-                .foregroundStyle(Color.white.opacity(0.85))
+                .foregroundStyle(KidTheme.textOnCardPrimary.opacity(0.95))
                 .lineStyle(StrokeStyle(lineWidth: 2))
                 .interpolationMethod(.catmullRom)
+            }
+            .chartXAxis {
+                AxisMarks { _ in
+                    AxisGridLine().foregroundStyle(Color.black.opacity(0.08))
+                    AxisValueLabel().foregroundStyle(KidTheme.textOnCardSecondary)
+                }
+            }
+            .chartYAxis {
+                AxisMarks { _ in
+                    AxisGridLine().foregroundStyle(Color.black.opacity(0.08))
+                    AxisValueLabel().foregroundStyle(KidTheme.textOnCardSecondary)
+                }
             }
             .frame(height: 170)
             .padding(.vertical, 6)
