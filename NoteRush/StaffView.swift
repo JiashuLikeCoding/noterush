@@ -804,7 +804,7 @@ final class SongViewModel: ObservableObject {
         // Judge against the note that is currently at the dashed line.
         // event.time == currentTime when the note is exactly on the line.
         // UX: do NOT judge before the note reaches the line.
-        let earlyWindow: TimeInterval = 0.20   // increased window (requested)
+        let earlyWindow: TimeInterval = 0.50   // increased window (requested)
         let lateWindow: TimeInterval = 1.68    // increased window (requested)
         let anchorDelay = lateWindow
 
