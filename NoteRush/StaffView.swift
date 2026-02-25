@@ -12,23 +12,48 @@ struct ClefIconView: View {
     let metrics: StaffMetrics
     let yOffset: CGFloat
 
+    // Animation: after entering training, fly to the top-right corner.
+    let collapsed: Bool
+    let collapsedIndex: Int
+
+    init(clef: StaffClef, metrics: StaffMetrics, yOffset: CGFloat, collapsed: Bool = false, collapsedIndex: Int = 0) {
+        self.clef = clef
+        self.metrics = metrics
+        self.yOffset = yOffset
+        self.collapsed = collapsed
+        self.collapsedIndex = collapsedIndex
+    }
+
     var body: some View {
         let assetName = clef == .treble ? "high" : "low"
         let iconSize = metrics.lineSpacing * 7.8
         let minX = iconSize * 0.45
-        let xPosition = max(minX, metrics.leftMargin - metrics.lineSpacing * 1.2)
-        let yPosition = clef == .treble
-            ? (metrics.y(for: metrics.topStaffLineIndex) + metrics.y(for: metrics.bottomStaffLineIndex)) / 2
-            : (metrics.y(for: metrics.topStaffLineIndex) + metrics.y(for: metrics.bottomStaffLineIndex)) / 2
 
-        return Group {
-            Image(assetName)
-                .resizable()
-                .scaledToFit()
-                .frame(width: iconSize, height: iconSize)
-                .opacity(CuteTheme.clefOpacity)
-        }
-        .position(x: xPosition, y: yPosition + yOffset)
+        // Default (full-size) position
+        let defaultX = max(minX, metrics.leftMargin - metrics.lineSpacing * 1.2)
+        let defaultY = (metrics.y(for: metrics.topStaffLineIndex) + metrics.y(for: metrics.bottomStaffLineIndex)) / 2 + yOffset
+
+        // Collapsed (top-right) position
+        // In GRAND mode, each clef belongs to its own staff slot; yOffset places the slot.
+        // So the collapsed icon should sit in the top-right corner of *that slot*.
+        let collapsedX = metrics.size.width - 26
+        let collapsedY = yOffset + 24
+
+        return Image(assetName)
+            .resizable()
+            .scaledToFit()
+            .frame(width: iconSize, height: iconSize)
+            .opacity(CuteTheme.clefOpacity)
+            // Keep the layout-settle from animating; only animate the intentional collapse.
+            .transaction { tx in
+                if !collapsed { tx.animation = nil }
+            }
+            .scaleEffect(collapsed ? 0.44 : 1.0, anchor: .center) // 2x bigger than previous collapsed size
+            .position(
+                x: collapsed ? collapsedX : defaultX,
+                y: collapsed ? collapsedY : defaultY
+            )
+            .animation(.spring(response: 0.55, dampingFraction: 0.88), value: collapsed)
     }
 }
 
@@ -43,7 +68,9 @@ struct StaffLayout {
 
         switch mode {
         case .grand:
-            let gap = size.height * 0.12
+            // Reduce the vertical gap between treble/bass staves so the keyboard stays on-screen.
+            // (User feedback: Grand Staff was squeezing the keyboard off-screen.)
+            let gap = size.height * 0.03
             let staffHeight = max(1, (size.height - gap) / 2)
             let trebleMetrics = StaffMetrics(size: CGSize(width: size.width, height: staffHeight))
             let bassMetrics = StaffMetrics(size: CGSize(width: size.width, height: staffHeight))
@@ -85,6 +112,12 @@ struct StaffView: View {
     let clefMode: StaffClefMode
     let noteColor: Color
 
+    // Intro state is controlled by the parent view. This avoids SwiftUI creating the view early
+    // (off-screen) and running the intro timeline before the user actually sees it.
+    let clefCollapsed: Bool
+    let showNotes: Bool
+    let introProgress: CGFloat
+
     init(
         note: StaffNote,
         flashCorrect: Bool,
@@ -92,7 +125,10 @@ struct StaffView: View {
         shakeTrigger: Int,
         rhythm: NoteRhythm = .quarter,
         clefMode: StaffClefMode = .treble,
-        noteColor: Color = .black
+        noteColor: Color = .black,
+        clefCollapsed: Bool = false,
+        showNotes: Bool = true,
+        introProgress: CGFloat = 1
     ) {
         self.note = note
         self.flashCorrect = flashCorrect
@@ -101,6 +137,9 @@ struct StaffView: View {
         self.rhythm = rhythm
         self.clefMode = clefMode
         self.noteColor = noteColor
+        self.clefCollapsed = clefCollapsed
+        self.showNotes = showNotes
+        self.introProgress = introProgress
     }
 
     var body: some View {
@@ -108,21 +147,26 @@ struct StaffView: View {
             let layout = StaffLayout(size: proxy.size, mode: clefMode)
             let noteSlot = layout.slot(for: note.clef)
 
+            // Intro: note should appear from the far left, then slide to the judgement line position.
+            let startX = noteSlot.metrics.leftMargin
+            let targetX = noteSlot.metrics.noteX
+            let introX = startX + (targetX - startX) * introProgress
+
             ZStack {
                 if clefMode == .grand {
                     if let treble = layout.treble {
-                        ClefIconView(clef: .treble, metrics: treble.metrics, yOffset: treble.yOffset)
+                        ClefIconView(clef: .treble, metrics: treble.metrics, yOffset: treble.yOffset, collapsed: clefCollapsed, collapsedIndex: 0)
                             .zIndex(-1)
                     }
                     if let bass = layout.bass {
-                        ClefIconView(clef: .bass, metrics: bass.metrics, yOffset: bass.yOffset)
+                        ClefIconView(clef: .bass, metrics: bass.metrics, yOffset: bass.yOffset, collapsed: clefCollapsed, collapsedIndex: 1)
                             .zIndex(-1)
                     }
                 } else if clefMode == .bass {
-                    ClefIconView(clef: .bass, metrics: layout.single.metrics, yOffset: 0)
+                    ClefIconView(clef: .bass, metrics: layout.single.metrics, yOffset: 0, collapsed: clefCollapsed, collapsedIndex: 0)
                         .zIndex(-1)
                 } else {
-                    ClefIconView(clef: .treble, metrics: layout.single.metrics, yOffset: 0)
+                    ClefIconView(clef: .treble, metrics: layout.single.metrics, yOffset: 0, collapsed: clefCollapsed, collapsedIndex: 0)
                         .zIndex(-1)
                 }
 
@@ -141,35 +185,37 @@ struct StaffView: View {
                     StaffLinesView(metrics: layout.single.metrics)
                         .zIndex(0)
                 }
-                NoteGlyphView(
-                    note: note,
-                    metrics: noteSlot.metrics,
-                    xPosition: noteSlot.metrics.noteX,
-                    color: noteColor,
-                    rhythm: rhythm,
-                    flashCorrect: flashCorrect,
-                    flashIncorrect: flashIncorrect,
-                    yOffset: noteSlot.yOffset
-                )
-                .zIndex(2)
-                .modifier(ShakeEffect(animatableData: CGFloat(shakeTrigger)))
-                .animation(.linear(duration: 0.4), value: shakeTrigger)
-
-                if let pairedNote = pairedNote(for: note) {
-                    let pairedSlot = layout.slot(for: pairedNote.clef)
+                if showNotes {
                     NoteGlyphView(
-                        note: pairedNote,
-                        metrics: pairedSlot.metrics,
-                        xPosition: pairedSlot.metrics.noteX,
+                        note: note,
+                        metrics: noteSlot.metrics,
+                        xPosition: introX,
                         color: noteColor,
                         rhythm: rhythm,
                         flashCorrect: flashCorrect,
                         flashIncorrect: flashIncorrect,
-                        yOffset: pairedSlot.yOffset,
-                        showNoteName: false,
-                        namingMode: .letters
+                        yOffset: noteSlot.yOffset
                     )
                     .zIndex(2)
+                    .modifier(ShakeEffect(animatableData: CGFloat(shakeTrigger)))
+                    .animation(.linear(duration: 0.4), value: shakeTrigger)
+
+                    if let pairedNote = pairedNote(for: note) {
+                        let pairedSlot = layout.slot(for: pairedNote.clef)
+                        NoteGlyphView(
+                            note: pairedNote,
+                            metrics: pairedSlot.metrics,
+                            xPosition: introX,
+                            color: noteColor,
+                            rhythm: rhythm,
+                            flashCorrect: flashCorrect,
+                            flashIncorrect: flashIncorrect,
+                            yOffset: pairedSlot.yOffset,
+                            showNoteName: false,
+                            namingMode: .letters
+                        )
+                        .zIndex(2)
+                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -585,6 +631,8 @@ final class SongViewModel: ObservableObject {
 
     @Published private(set) var events: [SongNoteEvent] = []
 
+    private let recordMode: TrainingModeRecord
+
     var scrollConfig: ScrollConfig { ScrollConfig() }
     /// Scrolling speed multiplier.
     /// Requirement: changing BPM should both speed up the scroll AND make notes closer together.
@@ -601,18 +649,23 @@ final class SongViewModel: ObservableObject {
     /// (instead of already sitting on the judgement line).
     private func resetClockForScrollStart() {
         // In ScrollingStaffView: x = judgementX - (event.time - currentTime) * (leftSpan/leadTime) * scrollSpeedMultiplier
-        // We want the first event (time=0) to start at leftMargin, so set currentTime = -leadTime/scrollSpeedMultiplier.
+        // We want the first event (time=0) to start at leftMargin, so set currentTime = -lead/scrollSpeedMultiplier.
         let lead = scrollConfig.leadTime
         let mult = max(0.05, scrollSpeedMultiplier)
         currentTime = -lead / mult
         lastJudgementTime = currentTime
+        lastTickTimestamp = CACurrentMediaTime()
     }
 
     private var timer: Timer?
     private var currentIndex: Int = 0
 
-    init(song: Song) {
+    // Use a real clock for timing; Timer cadence is not exact and causes visible/input misalignment.
+    private var lastTickTimestamp: CFTimeInterval?
+
+    init(song: Song, recordMode: TrainingModeRecord = .songs) {
         self.song = song
+        self.recordMode = recordMode
         self.bpm = song.bpm
         rebuildEvents()
         resetClockForScrollStart()
@@ -647,7 +700,9 @@ final class SongViewModel: ObservableObject {
         stop()
         isPaused = false
         isFinished = false
-        timer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: true) { [weak self] _ in
+        lastTickTimestamp = CACurrentMediaTime()
+        // Drive updates frequently, but advance time based on the real elapsed time.
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
             self?.tick()
         }
     }
@@ -655,6 +710,7 @@ final class SongViewModel: ObservableObject {
     func stop() {
         timer?.invalidate()
         timer = nil
+        lastTickTimestamp = nil
     }
 
     func resume() { start() }
@@ -690,8 +746,10 @@ final class SongViewModel: ObservableObject {
 
         // Judge against the note that is currently at the dashed line.
         // event.time == currentTime when the note is exactly on the line.
-        let hitWindow: TimeInterval = 0.42
-        let anchorDelay = hitWindow
+        // UX: do NOT judge before the note reaches the line.
+        let earlyWindow: TimeInterval = 0.10   // small tolerance for timing jitter (wider)
+        let lateWindow: TimeInterval = 0.84    // allow late hits (human reaction, wider)
+        let anchorDelay = lateWindow
 
         // Prefer the earliest unjudged note.
         let idx = currentIndex
@@ -699,7 +757,8 @@ final class SongViewModel: ObservableObject {
         let dt = targetEvent.time - currentTime
 
         // If the user taps too early/late, ignore (so we don't judge the wrong note).
-        guard abs(dt) <= hitWindow else { return }
+        // dt > 0 means the note has NOT reached the line yet.
+        guard dt <= earlyWindow && dt >= -lateWindow else { return }
 
         let correct = (letter == targetEvent.note.letter)
         let judgement: Judgement = correct ? .perfect : .miss
@@ -709,6 +768,9 @@ final class SongViewModel: ObservableObject {
         lastJudgementTime = currentTime
 
         events[idx].judgement = judgement
+
+        // Records
+        RecordsStore.shared.logAnswer(mode: recordMode, correct: correct)
 
         // Advance regardless (the note at the line has been judged).
         currentIndex += 1
@@ -724,7 +786,12 @@ final class SongViewModel: ObservableObject {
 
     private func tick() {
         guard !isPaused, !isFinished else { return }
-        currentTime += 0.02
+
+        let now = CACurrentMediaTime()
+        let last = lastTickTimestamp ?? now
+        let delta = max(0, min(0.25, now - last))
+        lastTickTimestamp = now
+        currentTime += delta
 
         // Apply pending sound anchor switch only after the judgement window ends.
         if let t = soundAnchorSwitchTime, currentTime >= t {
@@ -734,7 +801,7 @@ final class SongViewModel: ObservableObject {
         }
 
         // Auto-miss notes that have passed the dashed line without being judged.
-        let missWindow: TimeInterval = 0.42
+        let missWindow: TimeInterval = 0.84
         while currentIndex < events.count {
             let e = events[currentIndex]
             if e.judgement != nil {
@@ -743,6 +810,10 @@ final class SongViewModel: ObservableObject {
             }
             if currentTime > e.time + missWindow {
                 events[currentIndex].judgement = .miss
+
+                // Records
+                RecordsStore.shared.logAnswer(mode: recordMode, correct: false)
+
                 lastJudgement = .miss
                 lastJudgementLetter = e.note.letter
                 lastJudgementTime = currentTime

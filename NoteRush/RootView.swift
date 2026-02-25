@@ -11,7 +11,7 @@ struct RootView: View {
     @AppStorage(AppSettingsKeys.appTheme) private var appThemeRaw: String = AppTheme.zen.rawValue
     @AppStorage(AppSettingsKeys.staffClefMode) private var staffClefModeRaw: String = StaffClefMode.treble.rawValue
     @AppStorage(AppSettingsKeys.freePracticeClefMode) private var freePracticeClefModeRaw: String = StaffClefMode.treble.rawValue
-    @State private var step: Step = .entry
+    @State private var step: Step = .selection
     @State private var bpm: Double = 80
     @AppStorage(AppSettingsKeys.noteNamingMode) private var namingModeRaw: String = NoteNamingMode.letters.rawValue
     @State private var rhythm: NoteRhythm = PracticeLevel.library.first?.rhythm ?? .quarter
@@ -89,9 +89,8 @@ struct RootView: View {
     private var content: some View {
         switch step {
         case .entry:
-            EntryView {
-                step = .selection
-            }
+            // Entry screen removed: jump straight to HOME.
+            Color.clear.onAppear { step = .selection }
         case .selection:
             SelectionView(
                 bpm: $bpm,
@@ -167,6 +166,8 @@ struct RootView: View {
         case .play:
             if let song = activeSong {
                 let onChangeClef: ((StaffClefMode, Double) -> Void)? = {
+                    // Product direction: SONG training does not expose clef selection.
+                    // Free practice keeps the clef picker.
                     if isFreePractice {
                         return { newMode, currentBpm in
                             freePracticeClefModeRaw = newMode.rawValue
@@ -184,19 +185,14 @@ struct RootView: View {
                             activeClefMode = newMode
                         }
                     }
-                    if let template = activeSongTemplate {
-                        return { newMode, currentBpm in
-                            activeSong = buildSong(
-                                from: template,
-                                bpm: currentBpm,
-                                clefMode: newMode,
-                                targetLetters: activeSongTargetLetters
-                            )
-                            activeClefMode = newMode
-                            songClefModes[template.id] = newMode
-                        }
-                    }
                     return nil
+                }()
+
+                let recordMode: TrainingModeRecord = {
+                    if !isFreePractice {
+                        return .songs
+                    }
+                    return selectedLevel == nil ? .practice : .levels
                 }()
 
                 SongModeView(
@@ -204,6 +200,8 @@ struct RootView: View {
                     namingMode: namingModeBinding,
                     clefMode: activeClefMode,
                     onChangeClef: onChangeClef,
+                    isSongTraining: !isFreePractice,
+                    recordMode: recordMode,
                     onExit: {
                         // Return to the page that started this session.
                         selectionTab = isFreePractice ? (selectedLevel == nil ? .practiceNotes : .levels) : .songs

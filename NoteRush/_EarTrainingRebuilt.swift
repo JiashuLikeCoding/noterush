@@ -148,6 +148,8 @@ final class PianoSoundEngine {
 
 @MainActor
 final class EarTrainingViewModel: ObservableObject {
+    // Prevent overlapping scheduled playback (Play vs Reveal) from cutting each other off.
+    private var playbackToken: Int = 0
     @Published private(set) var level: EarTrainingLevel
     @Published var notesPerQuestion: Int = 1
 
@@ -161,6 +163,9 @@ final class EarTrainingViewModel: ObservableObject {
     @Published private(set) var inputMidi: [Int] = []
 
     @Published private(set) var revealedTargetCount: Int = 0
+
+    // If the user revealed the answer for the current question, do NOT award progress points.
+    private var didRevealAnswerThisQuestion: Bool = false
 
     // Key flashing while revealing answer (supports duplicates)
     @Published private(set) var revealPulseMidi: Int? = nil
@@ -189,6 +194,7 @@ final class EarTrainingViewModel: ObservableObject {
         inputMidi = []
         revealedTargetCount = 0
         revealPulseMidi = nil
+        didRevealAnswerThisQuestion = false
 
         let n = max(1, min(5, notesPerQuestion))
 
@@ -238,22 +244,32 @@ final class EarTrainingViewModel: ObservableObject {
         targetMidi = clipped
         targetPlaybackMidi = clipped.shuffled()
 
-        // Autoplay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
+        // Autoplay (faster; user feedback: 2s felt too long)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             self?.play()
         }
     }
 
     func play() {
+        // Start a fresh playback sequence; older scheduled callbacks become no-ops.
+        playbackToken &+= 1
+        let token = playbackToken
+
         let seq = targetPlaybackMidi
+        let step: TimeInterval = 1.0
         for (i, midi) in seq.enumerated() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.42) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * step) { [weak self] in
+                guard let self else { return }
+                guard self.playbackToken == token else { return }
                 PianoSoundEngine.shared.play(midi: midi)
             }
         }
     }
 
     func revealAnswer() {
+        // Revealing the answer makes this question "practice only" (no progress credit).
+        didRevealAnswerThisQuestion = true
+
         // Always clear user input when revealing the answer.
         inputMidi = []
         lastResultCorrect = nil
@@ -263,9 +279,16 @@ final class EarTrainingViewModel: ObservableObject {
         guard total > 0 else { return }
         revealedTargetCount = 0
 
+        // Start a fresh playback sequence; older scheduled callbacks become no-ops.
+        playbackToken &+= 1
+        let token = playbackToken
+
+        let step: TimeInterval = 1.0
         for i in 0..<total {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.42) { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * step) { [weak self] in
                 guard let self else { return }
+                guard self.playbackToken == token else { return }
+
                 self.revealedTargetCount = min(total, i + 1)
 
                 // Flash the key for THIS step (even if the midi repeats).
@@ -303,11 +326,24 @@ final class EarTrainingViewModel: ObservableObject {
     }
 
     func confirm() {
-        let ok = inputMidi.sorted() == targetMidi.sorted()
+        // IMPORTANT: In LISTEN, the keyboard is a single octave, while the staff (especially GRAND)
+        // can render the same pitch class in a different octave.
+        // So correctness should be judged by pitch class multiset (ignore octave),
+        // ensuring keyboard position + heard pitch class match the answer.
+        func pcs(_ arr: [Int]) -> [Int] {
+            arr.map { (($0 % 12) + 12) % 12 }.sorted()
+        }
+
+        let ok = pcs(inputMidi) == pcs(targetMidi)
         lastResultCorrect = ok
 
+        // Records (LISTEN). User requested: record final correct/incorrect regardless of "显示答案".
+        RecordsStore.shared.logAnswer(mode: .listen, correct: ok)
+
         if ok {
-            incrementProgress(for: targetMidi)
+            if !didRevealAnswerThisQuestion {
+                incrementProgress(for: targetMidi)
+            }
             awaitingNextAfterCorrect = true
         } else {
             // record unique wrong notes (target notes that were missed)
@@ -322,7 +358,8 @@ final class EarTrainingViewModel: ObservableObject {
                 guard let self else { return }
                 self.inputMidi = []
                 self.lastResultCorrect = nil
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.10) {
+                // Replay after a short pause (faster; user feedback: interval felt too long)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                     self.play()
                 }
             }
@@ -421,29 +458,38 @@ struct EarTrainingSelectionCard: View {
     @State private var selectedLevel: EarTrainingLevel? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            ZenCardHeader(
-                title: "LISTEN",
-                subtitle: "Hear notes and answer on the keyboard",
-                symbol: "ear"
-            )
-            ZenDivider()
+        JellyCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("LISTEN")
+                            .font(.system(size: 18, weight: .heavy, design: .rounded))
+                            .foregroundColor(KidTheme.textOnCardPrimary)
+                        Text("听音训练")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundColor(KidTheme.textOnCardSecondary)
+                    }
 
-            VStack(spacing: 10) {
-                ForEach(EarTrainingLevel.library) { level in
-                    Button(action: { selectedLevel = level }) {
+                    Spacer()
+
+                    Image(systemName: "ear")
+                        .font(.system(size: 16, weight: .heavy))
+                        .foregroundColor(KidTheme.primary)
+                        .padding(10)
+                        .background(KidTheme.primary.opacity(0.12))
+                        .cornerRadius(14)
+                }
+
+                VStack(spacing: 12) {
+                    ForEach(EarTrainingLevel.library) { level in
                         EarLevelCardView(
                             level: level,
                             onStart: { selectedLevel = level }
                         )
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .cuteCard()
         .fullScreenCover(item: $selectedLevel) { level in
             EarTrainingView(level: level, namingMode: $namingMode)
         }
@@ -459,41 +505,55 @@ struct EarLevelCardView: View {
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(CuteTheme.controlFill)
+                        .fill(Color.black.opacity(0.04))
                         .frame(width: 44, height: 44)
-                        .overlay(
-                            Circle()
-                                .stroke(CuteTheme.controlBorder, lineWidth: 1)
-                        )
-                    Text("\(level.id)")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundColor(CuteTheme.textPrimary)
+                    Text("L\(level.id)")
+                        .font(.system(size: 14, weight: .heavy, design: .rounded))
+                        .foregroundColor(KidTheme.textOnCardPrimary)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(level.title)
-                        .font(.system(size: CuteTheme.FontSize.body, weight: .semibold, design: .rounded))
-                        .foregroundColor(CuteTheme.textPrimary)
+                        .font(.system(size: 16, weight: .heavy, design: .rounded))
+                        .foregroundColor(KidTheme.textOnCardPrimary)
                     Text(level.clefMode.titleKey)
-                        .font(.system(size: CuteTheme.FontSize.caption, weight: .regular, design: .rounded))
-                        .foregroundColor(CuteTheme.textSecondary)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(KidTheme.textOnCardSecondary)
                 }
 
                 Spacer()
 
-                ZenMetaTag {
-                    Text(level.clefMode.titleKey)
-                }
+                JellyPill(text: level.clefMode.titleKey, tint: KidTheme.accent)
             }
 
             Button(action: onStart) {
                 Text("开始")
+                    .font(.system(size: 16, weight: .heavy, design: .rounded))
+                    .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(
+                        LinearGradient(
+                            colors: [KidTheme.primary, KidTheme.primaryPressed],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(22)
+                    .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 8)
             }
-            .buttonStyle(ZenActionButtonStyle())
+            .buttonStyle(.plain)
         }
-        .padding(18)
-        .cuteCard()
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 26)
+                .fill(KidTheme.surfaceStrong)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26)
+                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                )
+        )
+        .shadow(color: Color.black.opacity(0.10), radius: 16, x: 0, y: 10)
     }
 }
 
@@ -512,73 +572,71 @@ struct EarTrainingView: View {
     }
 
     var body: some View {
-        VStack(spacing: 14) {
-            JellyTopBar(
-                titleEN: "LISTEN",
-                titleZH: "听音训练",
+        VStack(spacing: 10) {
+            ListenNavigationBar(
                 onBack: { dismiss() },
-                onSettings: { showSettings = true }
+                onOpenSettings: { showSettings = true }
             )
-            .padding(.top, 10)
 
-            VStack(spacing: 14) {
-                JellyCard(tint: KidTheme.primary) {
-                    HStack(spacing: 10) {
-                        Button("播放") { viewModel.play() }
-                            .buttonStyle(JellyButtonStyle(kind: .secondary))
+            VStack(spacing: 12) {
+                // Controls (compact; no scrolling)
+                CompactJellyCard {
+                    VStack(spacing: 10) {
+                            HStack(spacing: 10) {
+                                Button("播放") { viewModel.play() }
+                                    .buttonStyle(JellyTintButtonStyle(tint: KidTheme.primary))
 
-                        Button("显示答案") { viewModel.revealAnswer() }
-                            .buttonStyle(JellyButtonStyle(kind: .secondary))
+                                Button("显示答案") { viewModel.revealAnswer() }
+                                    .buttonStyle(JellyTintButtonStyle(tint: KidTheme.accent))
 
-                        if viewModel.awaitingNextAfterCorrect, viewModel.lastResultCorrect == true {
-                            Button("下一题") { viewModel.nextQuestion() }
-                                .buttonStyle(JellyButtonStyle(kind: .primary))
-                        }
-                    }
-                }
-
-                JellyCard {
-                    NamingModePicker(namingMode: $namingMode)
-                }
-
-                JellyCard {
-                    HStack(spacing: 10) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("一次听几个音")
-                                .font(.system(size: KidTheme.FontSize.caption, weight: .semibold, design: .rounded))
-                                .foregroundColor(KidTheme.textPrimary)
-                            Text("1–5 个")
-                                .font(.system(size: KidTheme.FontSize.tiny, weight: .medium, design: .rounded))
-                                .foregroundColor(KidTheme.textSecondary)
-                        }
-
-                        Spacer()
-
-                        HStack(spacing: 8) {
-                            ForEach([1,2,3,4,5], id: \ .self) { n in
-                                Button(action: { viewModel.notesPerQuestion = n; viewModel.newQuestion() }) {
-                                    Text("\(n)")
-                                        .font(.system(size: KidTheme.FontSize.caption, weight: .heavy, design: .rounded))
-                                        .foregroundColor(viewModel.notesPerQuestion == n ? .white : KidTheme.textPrimary)
-                                        .frame(width: 34, height: 34)
-                                        .background(viewModel.notesPerQuestion == n ? KidTheme.primary : KidTheme.surfaceStrong)
-                                        .cornerRadius(12)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(KidTheme.border, lineWidth: 1)
-                                        )
+                                if viewModel.awaitingNextAfterCorrect, viewModel.lastResultCorrect == true {
+                                    Button("下一题") { viewModel.nextQuestion() }
+                                        .buttonStyle(JellyTintButtonStyle(tint: KidTheme.success))
                                 }
-                                .buttonStyle(.plain)
                             }
+
+                            NamingModePicker(namingMode: $namingMode)
+
+                            HStack(spacing: 10) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("一次听几个音")
+                                        .font(.system(size: KidTheme.FontSize.caption, weight: .semibold, design: .rounded))
+                                        .foregroundColor(KidTheme.textOnCardPrimary)
+                                    Text("1–5 个")
+                                        .font(.system(size: KidTheme.FontSize.tiny, weight: .medium, design: .rounded))
+                                        .foregroundColor(KidTheme.textOnCardSecondary)
+                                }
+
+                                Spacer()
+
+                                HStack(spacing: 8) {
+                                    ForEach([1,2,3,4,5], id: \ .self) { n in
+                                        let isSelected = viewModel.notesPerQuestion == n
+                                        Button(action: {
+                                            viewModel.notesPerQuestion = n
+                                            viewModel.newQuestion()
+                                        }) {
+                                            Text("\(n)")
+                                                .font(.system(size: KidTheme.FontSize.caption, weight: .heavy, design: .rounded))
+                                                .foregroundColor(isSelected ? .white : KidTheme.textOnCardPrimary)
+                                                .frame(width: 34, height: 34)
+                                                .background(isSelected ? KidTheme.primary : KidTheme.surface)
+                                                .cornerRadius(12)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 12)
+                                                        .stroke(KidTheme.border, lineWidth: 1)
+                                                )
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                            }
+
+                            progressKidCard
                         }
-                    }
                 }
 
-                JellyCard {
-                    progressKidCard
-                }
-
-                JellyCard {
+                CompactJellyCard {
                     EarTrainingStaffCard(
                         clefMode: level.clefMode,
                         targetMidi: viewModel.targetPlaybackMidi,
@@ -587,37 +645,35 @@ struct EarTrainingView: View {
                         expectedCount: viewModel.targetMidi.count,
                         wrongFlashTrigger: viewModel.wrongFlashTrigger
                     )
-                    .frame(height: 260)
+                    .frame(height: 210)
                 }
 
-                JellyCard {
-                    EarTrainingKeyboard(
-                        namingMode: namingMode,
-                        baseMidi: viewModel.keyboardBaseMidi,
-                        revealedMidi: Set(viewModel.targetPlaybackMidi.prefix(viewModel.revealedTargetCount)),
-                        pulseMidi: viewModel.revealPulseMidi,
-                        pulseToken: viewModel.revealPulseToken,
-                        onTapMidi: { viewModel.addInput(midi: $0) }
-                    )
-                    .frame(minHeight: 220, maxHeight: 260)
-                    .layoutPriority(1)
-                }
-                .padding(.horizontal, 2)
+                CompactJellyCard {
+                    VStack(spacing: 10) {
+                        EarTrainingKeyboard(
+                            namingMode: namingMode,
+                            baseMidi: viewModel.keyboardBaseMidi,
+                            revealedMidi: Set(viewModel.targetPlaybackMidi.prefix(viewModel.revealedTargetCount)),
+                            pulseMidi: viewModel.revealPulseMidi,
+                            pulseToken: viewModel.revealPulseToken,
+                            onTapMidi: { viewModel.addInput(midi: $0) }
+                        )
+                        .frame(height: 220)
 
-                JellyCard {
-                    HStack(spacing: 12) {
-                        Button("⌫") { viewModel.backspace() }
-                            .buttonStyle(JellyButtonStyle(kind: .secondary))
-                        Button("清空") { viewModel.clear() }
-                            .buttonStyle(JellyButtonStyle(kind: .secondary))
+                        HStack(spacing: 12) {
+                            Button("⌫") { viewModel.backspace() }
+                                .buttonStyle(JellyButtonStyle(kind: .secondary))
+                            Button("清空") { viewModel.clear() }
+                                .buttonStyle(JellyButtonStyle(kind: .secondary))
+                        }
                     }
                 }
             }
             .padding(.horizontal, 16)
-
-            Spacer(minLength: 8)
+            .padding(.bottom, 18)
         }
         .kidBackground()
+        .recordSession(mode: .listen)
         .onAppear {
             // Reset progress every time entering a level.
             viewModel.resetProgressOnEnter()
@@ -663,6 +719,37 @@ struct EarTrainingView: View {
     }
 }
 
+private struct CompactJellyCard<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: KidTheme.Radius.card)
+                .fill(KidTheme.surface)
+                .overlay(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.22), Color.white.opacity(0.0)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: KidTheme.Radius.card))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: KidTheme.Radius.card)
+                        .stroke(KidTheme.border, lineWidth: 1)
+                )
+                .shadow(color: KidTheme.shadow.opacity(0.85), radius: 14, x: 0, y: 10)
+
+            content
+                .padding(12)
+        }
+    }
+}
+
 struct EarTrainingStaffCard: View {
     let clefMode: StaffClefMode
     let targetMidi: [Int]
@@ -673,39 +760,37 @@ struct EarTrainingStaffCard: View {
 
     @State private var wrongFlashOpacity: Double = 0
 
+    // Clef fly-away intro (requested): after 1s, fly to top-right and shrink.
+    @State private var clefCollapsed: Bool = false
+    // Notes appear after the clef animation finishes (another 1s).
+    @State private var showNotes: Bool = false
+
     var body: some View {
         GeometryReader { proxy in
             let layout = StaffLayout(size: proxy.size, mode: clefMode)
             let slots = max(1, expectedCount)
 
             ZStack {
-                // Staff background
+                // Staff background (lines)
                 if clefMode == .grand {
                     if let treble = layout.treble {
-                        ClefIconView(clef: .treble, metrics: treble.metrics, yOffset: treble.yOffset)
-                            .zIndex(-1)
                         StaffLinesView(metrics: treble.metrics)
                             .offset(y: treble.yOffset)
                             .zIndex(0)
                     }
                     if let bass = layout.bass {
-                        ClefIconView(clef: .bass, metrics: bass.metrics, yOffset: bass.yOffset)
-                            .zIndex(-1)
                         StaffLinesView(metrics: bass.metrics)
                             .offset(y: bass.yOffset)
                             .zIndex(0)
                     }
-                } else if clefMode == .bass {
-                    ClefIconView(clef: .bass, metrics: layout.single.metrics, yOffset: 0)
-                        .zIndex(-1)
-                    StaffLinesView(metrics: layout.single.metrics)
-                        .zIndex(0)
                 } else {
-                    ClefIconView(clef: .treble, metrics: layout.single.metrics, yOffset: 0)
-                        .zIndex(-1)
                     StaffLinesView(metrics: layout.single.metrics)
                         .zIndex(0)
                 }
+
+                // Clef fly-away intro
+                clefIconsOverlay(in: proxy.size, layout: layout)
+                    .zIndex(-1)
 
                 // slot positions across the staff width
                 let metricsForSlots = layout.single.metrics
@@ -714,70 +799,84 @@ struct EarTrainingStaffCard: View {
                     return metricsForSlots.leftMargin + (metricsForSlots.rightMargin - metricsForSlots.leftMargin) * t
                 }
 
-                // revealed answers (green)
-                ForEach(Array(targetMidi.prefix(revealedTargetCount).enumerated()), id: \ .offset) { idx, midi in
-                    if let rendered = renderedNote(for: midi) {
-                        let slot = layout.slot(for: rendered.note.clef)
-                        let x = slotXs[min(idx, slotXs.count - 1)]
-                        ZStack {
-                            NoteGlyphView(
-                                note: rendered.note,
-                                metrics: slot.metrics,
-                                xPosition: x,
-                                color: CuteTheme.judgementCorrect,
-                                rhythm: .quarter,
-                                yOffset: slot.yOffset
-                            )
-                            if rendered.showSharp {
-                                Text("#")
-                                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                                    .foregroundColor(CuteTheme.judgementCorrect)
-                                    .position(x: x - 18, y: slot.metrics.y(for: rendered.note.index) + slot.yOffset)
+                if showNotes {
+                    // revealed answers
+                    ForEach(Array(targetMidi.prefix(revealedTargetCount).enumerated()), id: \ .offset) { idx, midi in
+                        if let rendered = renderedNote(for: midi) {
+                            let slot = layout.slot(for: rendered.note.clef)
+                            let x = slotXs[min(idx, slotXs.count - 1)]
+                            let answerColor = listenAnswerHighlightColor(for: midi)
+                            ZStack {
+                                NoteGlyphView(
+                                    note: rendered.note,
+                                    metrics: slot.metrics,
+                                    xPosition: x,
+                                    color: answerColor,
+                                    rhythm: .quarter,
+                                    yOffset: slot.yOffset
+                                )
+                                if rendered.showSharp {
+                                    Text("#")
+                                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                                        .foregroundColor(answerColor)
+                                        .position(x: x - 18, y: slot.metrics.y(for: rendered.note.index) + slot.yOffset)
+                                }
                             }
+                            .zIndex(1)
                         }
-                        .zIndex(1)
                     }
-                }
 
-                // user input (blue)
-                ForEach(Array(inputMidi.enumerated()), id: \ .offset) { idx, midi in
-                    if let rendered = renderedNote(for: midi) {
-                        let slot = layout.slot(for: rendered.note.clef)
-                        let x = slotXs[min(idx, slotXs.count - 1)]
-                        ZStack {
-                            NoteGlyphView(
-                                note: rendered.note,
-                                metrics: slot.metrics,
-                                xPosition: x,
-                                color: CuteTheme.accent,
-                                rhythm: .quarter,
-                                yOffset: slot.yOffset
-                            )
-                            if rendered.showSharp {
-                                Text("#")
-                                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                                    .foregroundColor(CuteTheme.accent)
-                                    .position(x: x - 18, y: slot.metrics.y(for: rendered.note.index) + slot.yOffset)
+                    // user input
+                    ForEach(Array(inputMidi.enumerated()), id: \ .offset) { idx, midi in
+                        if let rendered = renderedNote(for: midi) {
+                            let slot = layout.slot(for: rendered.note.clef)
+                            let x = slotXs[min(idx, slotXs.count - 1)]
+                            let inputColor = KidTheme.userInput
+                            ZStack {
+                                NoteGlyphView(
+                                    note: rendered.note,
+                                    metrics: slot.metrics,
+                                    xPosition: x,
+                                    color: inputColor,
+                                    rhythm: .quarter,
+                                    yOffset: slot.yOffset
+                                )
+                                if rendered.showSharp {
+                                    Text("#")
+                                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                                        .foregroundColor(inputColor)
+                                        .position(x: x - 18, y: slot.metrics.y(for: rendered.note.index) + slot.yOffset)
+                                }
                             }
+                            .zIndex(2)
                         }
-                        .zIndex(2)
                     }
                 }
 
                 Rectangle()
                     .fill(CuteTheme.judgementWrong.opacity(wrongFlashOpacity))
-                    .cornerRadius(20)
+                    .cornerRadius(KidTheme.Radius.card)
                     .allowsHitTesting(false)
                     .zIndex(20)
             }
         }
-        .padding(12)
-        .background(CuteTheme.cardBackground)
-        .cornerRadius(20)
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(CuteTheme.cardBorder, lineWidth: 1)
-        )
+        // Note: this view is wrapped by CompactJellyCard already.
+        // Do not add another card background here (it looks like a double-layer card).
+        .onAppear {
+            // Start intro timeline: 1s -> clef flies to the top-right, then wait 1s -> notes appear.
+            clefCollapsed = false
+            showNotes = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                withAnimation(.spring(response: 0.55, dampingFraction: 0.88)) {
+                    clefCollapsed = true
+                }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                withAnimation(.easeOut(duration: 0.18)) {
+                    showNotes = true
+                }
+            }
+        }
         .onChange(of: wrongFlashTrigger) { _ in
             wrongFlashOpacity = 0
             withAnimation(.easeOut(duration: 0.12)) { wrongFlashOpacity = 0.25 }
@@ -793,13 +892,61 @@ struct EarTrainingStaffCard: View {
         }
     }
 
+    private func clefIconsOverlay(in size: CGSize, layout: StaffLayout) -> some View {
+        // Collapsed target positions (top-right)
+        let collapsedX = size.width - 22
+
+        func clefIcon(_ clef: StaffClef, metrics: StaffMetrics, yOffset: CGFloat, collapsedIndex: Int) -> some View {
+            let assetName = clef == .treble ? "high" : "low"
+            let iconSize = metrics.lineSpacing * 7.8
+
+            // Default (full-size) position matching old ClefIconView
+            let minX = iconSize * 0.45
+            let defaultX = max(minX, metrics.leftMargin - metrics.lineSpacing * 1.2)
+            let defaultY = (metrics.y(for: metrics.topStaffLineIndex) + metrics.y(for: metrics.bottomStaffLineIndex)) / 2 + yOffset
+
+            // In GRAND mode, each clef belongs to its own staff slot; yOffset places the slot.
+            // So the collapsed icon should sit in the top-right corner of *that slot*.
+            let collapsedY = yOffset + 24
+
+            return Image(assetName)
+                .resizable()
+                .scaledToFit()
+                .frame(width: iconSize, height: iconSize)
+                .opacity(CuteTheme.clefOpacity)
+                .scaleEffect(clefCollapsed ? 0.44 : 1.0, anchor: .center)
+                .position(x: clefCollapsed ? collapsedX : defaultX,
+                          y: clefCollapsed ? collapsedY : defaultY)
+        }
+
+        return ZStack {
+            switch clefMode {
+            case .grand:
+                if let treble = layout.treble {
+                    clefIcon(.treble, metrics: treble.metrics, yOffset: treble.yOffset, collapsedIndex: 0)
+                }
+                if let bass = layout.bass {
+                    clefIcon(.bass, metrics: bass.metrics, yOffset: bass.yOffset, collapsedIndex: 1)
+                }
+            case .bass:
+                clefIcon(.bass, metrics: layout.single.metrics, yOffset: 0, collapsedIndex: 0)
+            case .treble:
+                clefIcon(.treble, metrics: layout.single.metrics, yOffset: 0, collapsedIndex: 0)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
     private struct RenderedNote {
         let note: StaffNote
         let showSharp: Bool
     }
 
     private func renderedNote(for midi: Int) -> RenderedNote? {
-        // Snap to closest natural StaffNote; show # if it's a semitone above.
+        // Render pitches in a way that always matches the keyboard:
+        // - Natural notes (white keys) must NEVER show a sharp.
+        // - Accidentals are represented only as sharps (#), i.e. black keys = lower natural + #.
+
         let pools: [StaffNote]
         switch clefMode {
         case .treble:
@@ -810,14 +957,50 @@ struct EarTrainingStaffCard: View {
             let mid = 60
             pools = StaffNote.all(for: midi >= mid ? StaffClef.treble : StaffClef.bass)
         }
-        guard let nearest = pools.min(by: { abs($0.midiNoteNumber - midi) < abs($1.midiNoteNumber - midi) }) else { return nil }
 
-        let delta = midi - nearest.midiNoteNumber
-        let showSharp = (delta == 1)
-        return RenderedNote(note: nearest, showSharp: showSharp)
+        let pc = ((midi % 12) + 12) % 12
+        let isSharpPc: Bool = [1, 3, 6, 8, 10].contains(pc)
+
+        // Pick a base natural staff note by pitch class (and closest register).
+        let basePc = isSharpPc ? ((pc + 11) % 12) : pc // sharp -> previous natural
+        let candidates = pools.filter { ((($0.midiNoteNumber % 12) + 12) % 12) == basePc }
+
+        // If we can't find a matching pitch class in this clef pool, fall back.
+        let base: StaffNote?
+        if let nearestSamePc = candidates.min(by: { abs($0.midiNoteNumber - midi) < abs($1.midiNoteNumber - midi) }) {
+            base = nearestSamePc
+        } else {
+            base = pools.min(by: { abs($0.midiNoteNumber - midi) < abs($1.midiNoteNumber - midi) })
+        }
+
+        guard let base else { return nil }
+        return RenderedNote(note: base, showSharp: isSharpPc)
     }
 }
 
+
+fileprivate func listenAnswerHighlightColor(for midi: Int) -> Color {
+    // Answer colors must be HIGH-CONTRAST on a light staff card, and MUST NOT use purple
+    // (purple is reserved for user input). Also keep colors far apart so adjacent notes
+    // don't look too similar.
+    // Use pitch class mapping so any octave still looks consistent.
+    switch ((midi % 12) + 12) % 12 {
+    case 0:  return Color(red: 0.92, green: 0.18, blue: 0.22) // C  - red
+    case 1:  return Color(red: 0.98, green: 0.20, blue: 0.55) // C# - hot pink (not purple)
+    case 2:  return Color(red: 0.98, green: 0.44, blue: 0.10) // D  - orange
+    case 3:  return Color(red: 0.55, green: 0.30, blue: 0.08) // D# - brown (very distinct)
+    case 4:  return Color(red: 0.88, green: 0.66, blue: 0.08) // E  - amber/gold
+    case 5:  return Color(red: 0.10, green: 0.62, blue: 0.26) // F  - green
+    case 6:  return Color(red: 0.06, green: 0.70, blue: 0.72) // F# - cyan
+    case 7:  return Color(red: 0.10, green: 0.42, blue: 0.95) // G  - blue
+    case 8:  return Color(red: 0.02, green: 0.56, blue: 0.36) // G# - teal-green (avoid blue overlap)
+    case 9:  return Color(red: 0.12, green: 0.22, blue: 0.78) // A  - navy (separated from G)
+    case 10: return Color(red: 0.36, green: 0.78, blue: 0.08) // A# - lime
+    case 11: return Color(red: 0.90, green: 0.30, blue: 0.06) // B  - vermillion
+    default:
+        return Color.white
+    }
+}
 
 struct EarTrainingKeyboard: View {
     let namingMode: NoteNamingMode
@@ -882,17 +1065,23 @@ struct EarTrainingKeyboard: View {
                                 RoundedRectangle(cornerRadius: 10)
                                     .stroke(Color.black.opacity(0.12), lineWidth: 1)
 
+                                let answerColor = listenAnswerHighlightColor(for: midi)
                                 if revealedMidi.contains(midi) {
                                     RoundedRectangle(cornerRadius: 10)
-                                        .stroke(CuteTheme.judgementCorrect.opacity(0.65), lineWidth: 2)
+                                        .fill(answerColor.opacity(0.22))
                                         .padding(2)
+
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(answerColor.opacity(0.95), lineWidth: 3)
+                                        .padding(2)
+                                        .shadow(color: answerColor.opacity(0.25), radius: 10)
                                 }
 
                                 // Pulse highlight (supports duplicates by using pulseToken)
                                 if pulseMidi == midi {
                                     RoundedRectangle(cornerRadius: 10)
-                                        .stroke(CuteTheme.judgementCorrect, lineWidth: 3)
-                                        .shadow(color: CuteTheme.judgementCorrect.opacity(0.35), radius: 6)
+                                        .stroke(answerColor, lineWidth: 4)
+                                        .shadow(color: answerColor.opacity(0.45), radius: 14)
                                         .padding(2)
                                         .transition(.opacity)
                                         .id("pulse_w_\(midi)_\(pulseToken)")
@@ -927,16 +1116,18 @@ struct EarTrainingKeyboard: View {
                                 .fill(Color.black.opacity(0.95))
                                 .shadow(color: Color.black.opacity(0.25), radius: 5, x: 0, y: 3)
 
+                            let answerColor = listenAnswerHighlightColor(for: bk.midi)
                             if revealedMidi.contains(bk.midi) {
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(CuteTheme.judgementCorrect.opacity(0.65), lineWidth: 2)
+                                    .stroke(answerColor.opacity(0.95), lineWidth: 3)
                                     .padding(2)
+                                    .shadow(color: answerColor.opacity(0.35), radius: 12)
                             }
 
                             if pulseMidi == bk.midi {
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(CuteTheme.judgementCorrect, lineWidth: 2)
-                                    .shadow(color: CuteTheme.judgementCorrect.opacity(0.35), radius: 6)
+                                    .stroke(answerColor, lineWidth: 4)
+                                    .shadow(color: answerColor.opacity(0.55), radius: 16)
                                     .padding(2)
                                     .transition(.opacity)
                                     .id("pulse_b_\(bk.midi)_\(pulseToken)")
@@ -966,6 +1157,54 @@ struct EarTrainingKeyboard: View {
         case .a: return baseMidi + 9
         case .b: return baseMidi + 11
         }
+    }
+
+}
+
+struct ListenNavigationBar: View {
+    let onBack: () -> Void
+    let onOpenSettings: () -> Void
+
+    var body: some View {
+        ZStack {
+            HStack(spacing: 12) {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(width: 36, height: 36)
+                        .background(KidTheme.surfaceStrong)
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(KidTheme.border, lineWidth: 1)
+                        )
+                }
+                .foregroundColor(KidTheme.textOnBackgroundPrimary)
+
+                Spacer()
+
+                Button(action: onOpenSettings) {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .frame(width: 36, height: 36)
+                        .background(KidTheme.surfaceStrong)
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(KidTheme.border, lineWidth: 1)
+                        )
+                }
+                .foregroundColor(KidTheme.textOnBackgroundPrimary)
+            }
+
+            Text("LISTEN")
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundColor(KidTheme.textOnBackgroundPrimary)
+                .frame(maxWidth: .infinity, alignment: .center)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
+        .padding(.bottom, 4)
     }
 }
 

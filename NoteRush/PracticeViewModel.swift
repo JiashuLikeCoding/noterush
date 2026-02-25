@@ -616,6 +616,9 @@ final class PracticeViewModel: ObservableObject {
         isLocked = true
         totalAnswered += 1
 
+        // Records
+        RecordsStore.shared.logAnswer(mode: .practice, correct: isCorrect)
+
         if isCorrect {
             totalCorrect += 1
             combo += 1

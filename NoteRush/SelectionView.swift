@@ -5,6 +5,7 @@ enum SelectionTab: String, CaseIterable, Identifiable {
     case songs
     case levels
     case earTraining
+    case records
 
     var id: String { rawValue }
 
@@ -18,6 +19,8 @@ enum SelectionTab: String, CaseIterable, Identifiable {
             return "Tab.Levels"
         case .earTraining:
             return "Tab.EarTraining"
+        case .records:
+            return "Tab.Records"
         }
     }
 }
@@ -42,12 +45,15 @@ struct SelectionView: View {
     @State private var showMidiDetectedAlert: Bool = false
     @State private var lastHadMidiSources: Bool = false
 
+    // QuickPickSheet removed (HOME no longer has the big "开始练习" button).
+
     @AppStorage(AppSettingsKeys.soundEffectsEnabled) private var soundEnabled: Bool = true
     @AppStorage(AppSettingsKeys.appLanguage) private var appLanguageRaw: String = AppLanguage.system.rawValue
     @AppStorage(AppSettingsKeys.appTheme) private var appThemeRaw: String = AppTheme.zen.rawValue
     @AppStorage(AppSettingsKeys.staffClefMode) private var staffClefModeRaw: String = StaffClefMode.treble.rawValue
     @AppStorage(AppSettingsKeys.showNoteName) private var showNoteName: Bool = false
-    @AppStorage(AppSettingsKeys.showJudgementNoteName) private var showJudgementNoteName: Bool = false
+    // Feedback note-name display removed per product direction.
+    private let showJudgementNoteName: Bool = false
     @AppStorage(AppSettingsKeys.freePracticeClefMode) private var freePracticeClefModeRaw: String = StaffClefMode.treble.rawValue
     @AppStorage(AppSettingsKeys.useColoredKeys) private var useColoredKeys: Bool = true
     @AppStorage(AppSettingsKeys.useColoredNotes) private var useColoredNotes: Bool = false
@@ -59,35 +65,43 @@ struct SelectionView: View {
     @State private var songTargetLetters: [UUID: Set<NoteLetter>] = [:]
 
     var body: some View {
-        VStack(spacing: 14) {
-            JellyTopBar(
-                titleEN: showLobby ? "HOME" : titleEN(for: activeTab),
-                titleZH: showLobby ? "开始" : titleZH(for: activeTab),
-                onBack: (showLobby || showingSettings) ? nil : { withAnimation(.easeOut(duration: 0.18)) { showLobby = true } },
-                onSettings: { showingSettings.toggle() }
-            )
-            .padding(.top, 10)
-
-            if showingSettings {
-                ScrollView {
-                    AppSettingsCard(
-                        soundEnabled: $soundEnabled,
-                        appLanguageRaw: $appLanguageRaw,
-                        appThemeRaw: $appThemeRaw,
-                        showNoteName: $showNoteName,
-                        showJudgementNoteName: $showJudgementNoteName,
-                        useColoredKeys: $useColoredKeys,
-                        useColoredNotes: $useColoredNotes,
-                        noteDisplayRhythmModeRaw: $noteDisplayRhythmModeRaw,
-                        microphoneInputEnabled: $microphoneInputEnabled,
-                        midiInputEnabled: $midiInputEnabled,
-                        inputModeRaw: $inputModeRaw
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 14) {
+                if showingSettings {
+                    JellyTopBar(
+                        titleEN: "SETTINGS",
+                        titleZH: "设置",
+                        onBack: { showingSettings = false },
+                        onSettings: nil
                     )
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
+                    .zIndex(10)
+                } else if !showLobby {
+                    JellyTopBar(
+                        titleEN: titleEN(for: activeTab),
+                        titleZH: titleZH(for: activeTab),
+                        onBack: { withAnimation(.easeOut(duration: 0.18)) { showLobby = true } },
+                        onSettings: { showingSettings.toggle() }
+                    )
+                    .zIndex(10)
                 }
-            } else if showLobby {
+
+                if showingSettings {
+                    ScrollView {
+                        AppSettingsCard(
+                            soundEnabled: $soundEnabled,
+                            appLanguageRaw: $appLanguageRaw,
+                            showNoteName: $showNoteName,
+                            // showJudgementNoteName removed
+                            useColoredKeys: $useColoredKeys,
+                            useColoredNotes: $useColoredNotes,
+                            noteDisplayRhythmModeRaw: $noteDisplayRhythmModeRaw
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
+                    }
+                } else if showLobby {
                 SelectionLobby(
+                    namingMode: $namingMode,
                     onPickPractice: {
                         activeTab = .practiceNotes
                         withAnimation(.easeOut(duration: 0.18)) { showLobby = false }
@@ -96,12 +110,16 @@ struct SelectionView: View {
                         activeTab = .levels
                         withAnimation(.easeOut(duration: 0.18)) { showLobby = false }
                     },
+                    onPickListen: {
+                        activeTab = .earTraining
+                        withAnimation(.easeOut(duration: 0.18)) { showLobby = false }
+                    },
                     onPickSong: {
                         activeTab = .songs
                         withAnimation(.easeOut(duration: 0.18)) { showLobby = false }
                     },
-                    onPickListen: {
-                        activeTab = .earTraining
+                    onPickRecords: {
+                        activeTab = .records
                         withAnimation(.easeOut(duration: 0.18)) { showLobby = false }
                     }
                 )
@@ -140,119 +158,149 @@ struct SelectionView: View {
                             )
                         case .earTraining:
                             EarTrainingSelectionCard(namingMode: $namingMode)
+                        case .records:
+                            RecordsView()
                         }
                     }
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
+                    // Extra bottom breathing room so the glass card shows rounded corners
+                    // above the home indicator and doesn't look "cut off".
+                    .padding(.bottom, 90)
+                }
+                // Prevent ScrollView from clipping rounded corners/shadows during scroll.
+                .scrollClipDisabled()
+                // Add a little extra inset so the last card can always show its rounded corners.
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: 24)
                 }
             }
 
             Spacer(minLength: 0)
         }
-        .kidBackground()
-        .onAppear {
-            midiMonitor.start()
-            lastHadMidiSources = midiMonitor.hasSources
-        }
-        .onChange(of: showingSettings) { isShowing in
-            // When opening settings, stay on current screen; when closing settings, return to lobby.
-            if !isShowing {
-                // Keep last selected tab but return to lobby so the app feels like a game hub.
-                showLobby = true
+
+        // HOME: keep ONLY the settings icon at top-right.
+        if showLobby && !showingSettings {
+            Button(action: { showingSettings = true }) {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(KidTheme.textOnBackgroundPrimary)
+                    .frame(width: 44, height: 44)
+                    .background(Color.white.opacity(0.16))
+                    .cornerRadius(16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.white.opacity(0.22), lineWidth: 1)
+                    )
             }
-        }
-        .onChange(of: midiMonitor.hasSources) { hasSources in
-            // Only alert on transition: no -> yes
-            if !lastHadMidiSources && hasSources {
-                showMidiDetectedAlert = true
-            }
-            lastHadMidiSources = hasSources
-        }
-        .alert("MIDI.DeviceDetected.Title", isPresented: $showMidiDetectedAlert) {
-            Button("OK") {}
-        } message: {
-            Text("MIDI.DeviceDetected.Message")
+            .buttonStyle(.plain)
+            .padding(.trailing, 16)
+            .padding(.top, 12)
         }
     }
+    .kidBackground()
+    .onAppear {
+        midiMonitor.start()
+        lastHadMidiSources = midiMonitor.hasSources
+    }
+    .onChange(of: showingSettings) { isShowing in
+        // When opening settings, stay on current screen; when closing settings, return to lobby.
+        if !isShowing {
+            // Keep last selected tab but return to lobby so the app feels like a game hub.
+            showLobby = true
+        }
+    }
+    .onChange(of: midiMonitor.hasSources) { hasSources in
+        // Only alert on transition: no -> yes
+        if !lastHadMidiSources && hasSources {
+            showMidiDetectedAlert = true
+        }
+        lastHadMidiSources = hasSources
+    }
+    .alert("MIDI.DeviceDetected.Title", isPresented: $showMidiDetectedAlert) {
+        Button("OK") {}
+    } message: {
+        Text("MIDI.DeviceDetected.Message")
+    }
+    // QuickPickSheet removed.
+
+}
 }
 
 // MARK: - Kid Lobby
 
 private struct SelectionLobby: View {
+    @Binding var namingMode: NoteNamingMode
     let onPickPractice: () -> Void
     let onPickLevel: () -> Void
-    let onPickSong: () -> Void
     let onPickListen: () -> Void
+    let onPickSong: () -> Void
+    let onPickRecords: () -> Void
 
     var body: some View {
-        VStack(spacing: 14) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("PICK A MODE")
-                        .font(.system(size: KidTheme.FontSize.hero, weight: .heavy, design: .rounded))
-                        .foregroundColor(KidTheme.textPrimary)
-                    Text("选择一个模式开始")
-                        .font(.system(size: KidTheme.FontSize.caption, weight: .semibold, design: .rounded))
-                        .foregroundColor(KidTheme.textSecondary)
+        VStack(spacing: 16) {
+            VStack(spacing: 10) {
+                HStack(spacing: 10) {
+                    Text("♪")
+                        .font(.system(size: 18, weight: .heavy))
+                        .foregroundColor(Color.white.opacity(0.9))
+                    Text("音乐小天才")
+                        .font(.system(size: 30, weight: .heavy, design: .rounded))
+                        .foregroundColor(Color.white)
+                    Text("♪")
+                        .font(.system(size: 18, weight: .heavy))
+                        .foregroundColor(Color.white.opacity(0.9))
                 }
 
-                Spacer()
-
-                JellyNoteSprite(mood: .idle)
-                    .frame(width: 54, height: 54)
-                    .opacity(0.95)
+                Text("让我们一起学习五线谱和音符吧！")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundColor(Color.white.opacity(0.85))
             }
-            .padding(.top, 6)
+            .padding(.top, 14)
 
-            Button(action: onPickPractice) {
-                ModeCard(
-                    titleEN: "PRACTICE",
-                    titleZH: "练习",
-                    subtitle: "Notes • Speed • Levels",
-                    tint: KidTheme.primary,
-                    symbol: "music.quarternote.3"
-                )
+            // Big glass card
+            ZStack {
+                RoundedRectangle(cornerRadius: 34)
+                    .fill(Color.white.opacity(0.18))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 34)
+                            .stroke(Color.white.opacity(0.22), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.14), radius: 24, x: 0, y: 16)
+
+                VStack(spacing: 16) {
+                    Image(systemName: "music.note")
+                        .font(.system(size: 34, weight: .black))
+                        .foregroundColor(Color.white.opacity(0.95))
+                        .padding(.top, 6)
+
+                    // Global naming mode (CDE vs Do Re Mi). Applies to all 4 modes before starting.
+                    NamingModeQuickToggle(namingMode: $namingMode)
+
+                    // 4 mode pills (order: 闯关 → 听音 → 歌曲 → 自由练习)
+                    HomePillButton(title: "闯关", subtitle: "挑战关卡，拿星星", colors: [KidTheme.success, KidTheme.success.opacity(0.7)], systemImage: "flag.checkered", action: onPickLevel)
+
+                    HomePillButton(title: "听音训练", subtitle: "听声音猜音符", colors: [KidTheme.primary, KidTheme.primary.opacity(0.7)], systemImage: "ear", action: onPickListen)
+
+                    HomePillButton(title: "歌曲", subtitle: "练熟悉的旋律", colors: [KidTheme.accent, KidTheme.accent.opacity(0.7)], systemImage: "music.note.list", action: onPickSong)
+
+                    HomePillButton(title: "自由练习", subtitle: "认识五线谱上的音符", colors: [Color(red: 1.00, green: 0.62, blue: 0.80), Color(red: 0.55, green: 0.84, blue: 1.00)], systemImage: "eyes", action: onPickPractice)
+
+                    HomePillButton(title: "记录", subtitle: "查看练习统计", colors: [Color(red: 0.55, green: 0.76, blue: 1.00), Color(red: 0.35, green: 0.60, blue: 1.00)], systemImage: "chart.bar.xaxis", action: onPickRecords)
+
+                    Spacer(minLength: 4)
+                }
+                .padding(22)
             }
-            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
 
-            Button(action: onPickLevel) {
-                ModeCard(
-                    titleEN: "LEVEL",
-                    titleZH: "闯关",
-                    subtitle: "Challenges • Stars",
-                    tint: KidTheme.success,
-                    symbol: "flag.checkered"
-                )
-            }
-            .buttonStyle(.plain)
+            // Bottom "开始练习" button removed per product direction.
 
-            Button(action: onPickSong) {
-                ModeCard(
-                    titleEN: "SONG",
-                    titleZH: "歌曲",
-                    subtitle: "Play real melodies",
-                    tint: KidTheme.accent,
-                    symbol: "music.note.list"
-                )
-            }
-            .buttonStyle(.plain)
-
-            Button(action: onPickListen) {
-                ModeCard(
-                    titleEN: "LISTEN",
-                    titleZH: "听音训练",
-                    subtitle: "Hear → Answer",
-                    tint: KidTheme.primary,
-                    symbol: "ear"
-                )
-            }
-            .buttonStyle(.plain)
-
-            Spacer(minLength: 8)
+            Spacer(minLength: 6)
         }
         .padding(.top, 2)
     }
 }
+
 
 private struct ModeCard: View {
     let titleEN: String
@@ -302,85 +350,113 @@ private struct ModeCard: View {
     }
 }
 
-private struct JellyPill: View {
-    let text: LocalizedStringKey
-    let tint: Color
-
-    init(text: String, tint: Color) {
-        self.text = LocalizedStringKey(text)
-        self.tint = tint
-    }
-
-    init(text: LocalizedStringKey, tint: Color) {
-        self.text = text
-        self.tint = tint
-    }
+private struct NamingModeQuickToggle: View {
+    @Binding var namingMode: NoteNamingMode
 
     var body: some View {
-        Text(text)
-            .font(.system(size: KidTheme.FontSize.caption, weight: .semibold, design: .rounded))
-            .foregroundColor(KidTheme.textPrimary.opacity(0.85))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(tint.opacity(0.10))
-            .cornerRadius(KidTheme.Radius.chip)
-            .overlay(
-                RoundedRectangle(cornerRadius: KidTheme.Radius.chip)
-                    .stroke(KidTheme.border, lineWidth: 1)
-            )
-    }
-}
+        HStack(spacing: 18) {
+            ForEach(NoteNamingMode.allCases) { mode in
+                Button(action: { namingMode = mode }) {
+                    VStack(spacing: 8) {
+                        Text(mode.segmentTitle)
+                            .font(.system(size: 15, weight: .heavy, design: .rounded))
+                            .foregroundColor(.white)
 
-private struct JellySectionHeader: View {
-    let titleEN: String
-    let titleZH: String
-    let symbol: String
-    let tint: Color
-
-    var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(tint.opacity(0.14))
-                    .frame(width: 40, height: 40)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(KidTheme.border, lineWidth: 1)
-                    )
-                Image(systemName: symbol)
-                    .font(.system(size: 16, weight: .heavy))
-                    .foregroundColor(tint)
+                        Rectangle()
+                            .fill(namingMode == mode ? Color.white.opacity(0.95) : Color.white.opacity(0.0))
+                            .frame(height: 3)
+                            .cornerRadius(2)
+                            .padding(.horizontal, 6)
+                    }
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
             }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(titleEN.uppercased())
-                    .font(.system(size: KidTheme.FontSize.title, weight: .heavy, design: .rounded))
-                    .foregroundColor(KidTheme.textPrimary)
-                Text(titleZH)
-                    .font(.system(size: KidTheme.FontSize.caption, weight: .semibold, design: .rounded))
-                    .foregroundColor(KidTheme.textSecondary)
-            }
-
-            Spacer()
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
+        .background(Color.white.opacity(0.12))
+        .cornerRadius(18)
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+        )
     }
 }
 
-private struct JellyLetterChip: View {
+private struct HomePillButton: View {
     let title: String
-    let isSelected: Bool
+    let subtitle: String
+    let colors: [Color]
+    let systemImage: String
+    let action: () -> Void
 
     var body: some View {
-        Text(title)
-            .font(.system(size: KidTheme.FontSize.caption, weight: .heavy, design: .rounded))
-            .foregroundColor(isSelected ? .white : KidTheme.textPrimary)
-            .frame(maxWidth: .infinity, minHeight: 34)
-            .background(isSelected ? KidTheme.primary : KidTheme.surfaceStrong)
-            .cornerRadius(14)
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(KidTheme.border, lineWidth: 1)
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 18, weight: .black))
+                    .foregroundColor(.white.opacity(0.95))
+                    .frame(width: 34)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 16, weight: .heavy, design: .rounded))
+                        .foregroundColor(.white)
+
+                    Text(subtitle)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white.opacity(0.86))
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white.opacity(0.90))
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 72)
+            .background(
+                LinearGradient(
+                    colors: colors,
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
             )
+            .cornerRadius(24)
+            .shadow(color: Color.black.opacity(0.18), radius: 14, x: 0, y: 10)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// (moved to shared JellyComponents.swift)
+
+private struct QuickPickSheet: View {
+    let onPickLevel: () -> Void
+    let onPickListen: () -> Void
+    let onPickSong: () -> Void
+    let onPickPractice: () -> Void
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Text("选择练习方式")
+                .font(.system(size: 18, weight: .heavy, design: .rounded))
+                .foregroundColor(KidTheme.textOnCardPrimary)
+                .padding(.top, 10)
+
+            HomePillButton(title: "闯关", subtitle: "挑战关卡，拿星星", colors: [KidTheme.success, KidTheme.success.opacity(0.75)], systemImage: "flag.checkered", action: onPickLevel)
+            HomePillButton(title: "听音训练", subtitle: "听声音猜音符", colors: [KidTheme.primary, KidTheme.primary.opacity(0.75)], systemImage: "ear", action: onPickListen)
+            HomePillButton(title: "歌曲", subtitle: "练熟悉的旋律", colors: [KidTheme.accent, KidTheme.accent.opacity(0.75)], systemImage: "music.note.list", action: onPickSong)
+            HomePillButton(title: "自由练习", subtitle: "认识五线谱上的音符", colors: [Color(red: 1.00, green: 0.62, blue: 0.80), Color(red: 0.55, green: 0.84, blue: 1.00)], systemImage: "eyes", action: onPickPractice)
+
+            Spacer(minLength: 4)
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 10)
+        .background(Color.white.opacity(0.96))
     }
 }
 
@@ -393,6 +469,7 @@ private extension SelectionView {
         case .songs: return "SONG"
         case .levels: return "LEVEL"
         case .earTraining: return "LISTEN"
+        case .records: return "RECORDS"
         }
     }
 
@@ -402,6 +479,7 @@ private extension SelectionView {
         case .songs: return "歌曲"
         case .levels: return "闯关"
         case .earTraining: return "听音训练"
+        case .records: return "记录"
         }
     }
 }
@@ -472,24 +550,29 @@ struct ZenClefPicker: View {
     var body: some View {
         HStack(spacing: 6) {
             ForEach(StaffClefMode.allCases) { mode in
+                let isSelected = selection == mode
                 Button(action: { selection = mode }) {
                     Text(mode.titleKey)
-                        .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.body))
-                        .foregroundColor(selection == mode ? .white : CuteTheme.textPrimary)
+                        .font(.custom("AvenirNext-DemiBold", size: KidTheme.FontSize.body))
+                        .foregroundColor(isSelected ? .white : KidTheme.textOnCardPrimary)
                         .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
-                        .background(selection == mode ? CuteTheme.accent : CuteTheme.controlFill)
+                        .background(isSelected ? KidTheme.primary : KidTheme.surface)
                         .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(KidTheme.border, lineWidth: 1)
+                        )
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(6)
-        .background(CuteTheme.cardBackground)
+        .background(KidTheme.surfaceStrong)
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(CuteTheme.controlBorder, lineWidth: 1)
+                .stroke(KidTheme.border, lineWidth: 1)
         )
     }
 }
@@ -685,89 +768,40 @@ struct ThemeSwatch: View {
 struct AppSettingsCard: View {
     @Binding var soundEnabled: Bool
     @Binding var appLanguageRaw: String
-    @Binding var appThemeRaw: String
     @Binding var showNoteName: Bool
-    @Binding var showJudgementNoteName: Bool
+    // showJudgementNoteName removed
     @Binding var useColoredKeys: Bool
     @Binding var useColoredNotes: Bool
     @Binding var noteDisplayRhythmModeRaw: String
-    @Binding var microphoneInputEnabled: Bool
-    @Binding var midiInputEnabled: Bool
-    @Binding var inputModeRaw: String
     @State private var showingLanguagePicker: Bool = false
 
     var body: some View {
-        // IMPORTANT: CuteTheme reads from UserDefaults. In SwiftUI, changing @AppStorage
-        // can update only the subview that uses that binding. We want the whole settings card
-        // to repaint immediately when appThemeRaw changes, so we derive a palette from it here.
-        let theme = AppTheme(rawValue: appThemeRaw) ?? .zen
-        let palette = theme.palette
+        // Settings UI is now fixed to the KidTheme look.
+        let accent = KidTheme.primary
 
         VStack(alignment: .leading, spacing: 12) {
             Text("App Settings")
                 .font(.system(size: CuteTheme.FontSize.section, weight: .bold, design: .rounded))
-                .foregroundColor(palette.textPrimary)
+                .foregroundColor(KidTheme.textOnCardPrimary)
 
             Toggle("Sound Effects", isOn: $soundEnabled)
-                .tint(palette.accent)
+                .tint(accent)
 
             Toggle("Show Note Name", isOn: $showNoteName)
-                .tint(palette.accent)
+                .tint(accent)
 
-            Toggle("Show Feedback Note Name", isOn: $showJudgementNoteName)
-                .tint(palette.accent)
+            // "Show Feedback Note Name" removed
 
             Toggle("Color Answer Keys", isOn: $useColoredKeys)
-                .tint(palette.accent)
+                .tint(accent)
 
             Toggle("Color Notes", isOn: $useColoredNotes)
-                .tint(palette.accent)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Input")
-                    .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.body))
-                    .foregroundColor(palette.textSecondary)
-
-                let modeBinding = Binding<InputMode>(
-                    get: { InputMode(rawValue: inputModeRaw) ?? .buttons },
-                    set: { inputModeRaw = $0.rawValue }
-                )
-
-                HStack(spacing: 8) {
-                    ForEach(InputMode.allCases) { mode in
-                        Button(action: { modeBinding.wrappedValue = mode }) {
-                            Text(mode.titleKey)
-                                .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.caption))
-                                .foregroundColor(modeBinding.wrappedValue == mode ? .white : palette.textPrimary)
-                                .frame(maxWidth: .infinity, minHeight: 32)
-                                .background(modeBinding.wrappedValue == mode ? palette.accent : palette.controlFill)
-                                .cornerRadius(10)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .onChange(of: modeBinding.wrappedValue) { newValue in
-                    // Keep legacy toggles in sync for now.
-                    microphoneInputEnabled = (newValue == .microphone)
-                    midiInputEnabled = (newValue == .midi)
-                }
-            }
-
-            // Legacy toggles are kept only for backward compatibility with existing stored settings.
-            // UI no longer exposes them as separate independent switches.
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Theme")
-                    .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.body))
-                    .foregroundColor(palette.textSecondary)
-
-                ThemePicker(selectedRaw: $appThemeRaw)
-            }
+                .tint(accent)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Note Display")
                     .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.body))
-                    .foregroundColor(palette.textSecondary)
+                    .foregroundColor(KidTheme.textOnCardSecondary)
 
                 let modes = NoteDisplayRhythmMode.allCases
                 HStack(spacing: 8) {
@@ -777,10 +811,14 @@ struct AppSettingsCard: View {
                         }) {
                             Text(mode.titleKey)
                                 .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.caption))
-                                .foregroundColor(noteDisplayRhythmModeRaw == mode.rawValue ? .white : palette.textPrimary)
+                                .foregroundColor(noteDisplayRhythmModeRaw == mode.rawValue ? .white : KidTheme.textOnCardPrimary)
                                 .frame(maxWidth: .infinity, minHeight: 32)
-                                .background(noteDisplayRhythmModeRaw == mode.rawValue ? palette.accent : palette.controlFill)
+                                .background(noteDisplayRhythmModeRaw == mode.rawValue ? accent : KidTheme.surface)
                                 .cornerRadius(10)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(KidTheme.border, lineWidth: 1)
+                                )
                         }
                         .buttonStyle(.plain)
                     }
@@ -790,7 +828,7 @@ struct AppSettingsCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Language")
                     .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.body))
-                    .foregroundColor(palette.textSecondary)
+                    .foregroundColor(KidTheme.textOnCardSecondary)
 
                 let languages = AppLanguage.allCases
                 let selectedLanguage = AppLanguage(rawValue: appLanguageRaw) ?? .system
@@ -800,19 +838,19 @@ struct AppSettingsCard: View {
                         Text(selectedLanguage.flag)
                         Text(selectedLanguage.nativeName)
                             .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.body))
-                            .foregroundColor(CuteTheme.textPrimary)
+                            .foregroundColor(KidTheme.textOnCardPrimary)
                         Spacer()
                         Image(systemName: "chevron.down")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(CuteTheme.textSecondary)
+                            .foregroundColor(KidTheme.textOnCardSecondary)
                     }
                     .padding(.horizontal, 12)
                     .frame(minHeight: 40)
-                    .background(CuteTheme.controlFill)
+                    .background(KidTheme.surface)
                     .cornerRadius(12)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(CuteTheme.controlBorder, lineWidth: 1)
+                            .stroke(KidTheme.border, lineWidth: 1)
                     )
                 }
                 .buttonStyle(.plain)
@@ -921,28 +959,39 @@ struct LevelSelectionCard: View {
     let onStart: (PracticeLevel) -> Void
 
     var body: some View {
-        JellyCard(tint: KidTheme.success) {
+        JellyCard {
             VStack(alignment: .leading, spacing: 14) {
-                JellySectionHeader(
-                    titleEN: "LEVEL",
-                    titleZH: "闯关",
-                    symbol: "flag.checkered",
-                    tint: KidTheme.success
-                )
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("LEVEL")
+                            .font(.system(size: 18, weight: .heavy, design: .rounded))
+                            .foregroundColor(KidTheme.textOnCardPrimary)
+                        Text("闯关")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundColor(KidTheme.textOnCardSecondary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "flag.checkered")
+                        .font(.system(size: 16, weight: .heavy))
+                        .foregroundColor(KidTheme.success)
+                        .padding(10)
+                        .background(KidTheme.success.opacity(0.12))
+                        .cornerRadius(14)
+                }
 
                 VStack(spacing: 12) {
                     ForEach(PracticeLevel.library) { level in
-                        Button(action: { apply(level) }) {
-                            LevelCardView(
-                                level: level,
-                                isSelected: selectedLevel?.id == level.id,
-                                onStart: {
-                                    apply(level)
-                                    onStart(level)
-                                }
-                            )
-                        }
-                        .buttonStyle(.plain)
+                        LevelCardView(
+                            level: level,
+                            isSelected: selectedLevel?.id == level.id,
+                            onSelect: { apply(level) },
+                            onStart: {
+                                apply(level)
+                                onStart(level)
+                            }
+                        )
                     }
                 }
             }
@@ -959,32 +1008,29 @@ struct LevelSelectionCard: View {
 struct LevelCardView: View {
     let level: PracticeLevel
     let isSelected: Bool
+    let onSelect: () -> Void
     let onStart: () -> Void
 
     var body: some View {
-        JellyCard(tint: isSelected ? KidTheme.primary : nil) {
+        Button(action: onSelect) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top, spacing: 12) {
                     ZStack {
                         Circle()
-                            .fill(KidTheme.surfaceStrong)
+                            .fill(Color.black.opacity(0.04))
                             .frame(width: 44, height: 44)
-                            .overlay(
-                                Circle()
-                                    .stroke(KidTheme.border, lineWidth: 1)
-                            )
                         Text("L\(level.id)")
                             .font(.system(size: 14, weight: .heavy, design: .rounded))
-                            .foregroundColor(KidTheme.textPrimary)
+                            .foregroundColor(KidTheme.textOnCardPrimary)
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(level.titleKey)
-                            .font(.system(size: KidTheme.FontSize.body, weight: .heavy, design: .rounded))
-                            .foregroundColor(KidTheme.textPrimary)
+                            .font(.system(size: 16, weight: .heavy, design: .rounded))
+                            .foregroundColor(KidTheme.textOnCardPrimary)
                         Text(level.subtitleKey)
-                            .font(.system(size: KidTheme.FontSize.caption, weight: .medium, design: .rounded))
-                            .foregroundColor(KidTheme.textSecondary)
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundColor(KidTheme.textOnCardSecondary)
                     }
 
                     Spacer()
@@ -1000,14 +1046,34 @@ struct LevelCardView: View {
 
                 Button(action: onStart) {
                     Text("开始")
+                        .font(.system(size: 16, weight: .heavy, design: .rounded))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(
+                            LinearGradient(
+                                colors: [KidTheme.primary, KidTheme.primaryPressed],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(22)
+                        .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 8)
                 }
-                .buttonStyle(JellyButtonStyle(kind: .primary))
+                .buttonStyle(.plain)
             }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 26)
+                    .fill(KidTheme.surfaceStrong)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 26)
+                            .stroke(isSelected ? KidTheme.primary.opacity(0.65) : Color.black.opacity(0.06), lineWidth: isSelected ? 2 : 1)
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.10), radius: 16, x: 0, y: 10)
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: KidTheme.Radius.card)
-                .stroke(isSelected ? KidTheme.primary : Color.clear, lineWidth: 2)
-        )
+        .buttonStyle(.plain)
     }
 }
 
@@ -1021,59 +1087,55 @@ struct SongSelectionCard: View {
     @State private var activeLevel: Int?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            ZenCardHeader(
-                title: "Songs",
-                subtitle: "Card.Songs.Subtitle",
-                symbol: "music.note.list"
-            )
+        JellyCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("SONG")
+                            .font(.system(size: 18, weight: .heavy, design: .rounded))
+                            .foregroundColor(KidTheme.textOnCardPrimary)
+                        Text("歌曲")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundColor(KidTheme.textOnCardSecondary)
+                    }
 
-            let grouped = Dictionary(grouping: SongTemplate.library, by: \.level)
-            let levels = grouped.keys.sorted()
-            let resolvedLevel = activeLevel ?? levels.first
+                    Spacer()
 
-            ZenLevelTabBar(
-                levels: levels,
-                selectedLevel: resolvedLevel,
-                onSelect: { activeLevel = $0 }
-            )
+                    Image(systemName: "music.note.list")
+                        .font(.system(size: 16, weight: .heavy))
+                        .foregroundColor(KidTheme.primary)
+                        .padding(10)
+                        .background(KidTheme.primary.opacity(0.12))
+                        .cornerRadius(14)
+                }
 
-            if let level = resolvedLevel {
-                VStack(spacing: 12) {
-                    ForEach(grouped[level] ?? []) { template in
-                        let binding = Binding<Set<NoteLetter>>(
-                            get: {
-                                songTargetLetters[template.id] ?? template.allowedLetters
-                            },
-                            set: { value in
-                                songTargetLetters[template.id] = value
-                            }
-                        )
-                        let clefBinding = Binding<StaffClefMode>(
-                            get: {
-                                songClefModes[template.id] ?? defaultClefMode
-                            },
-                            set: { value in
-                                songClefModes[template.id] = value
-                            }
-                        )
-                        SongCardView(
-                            template: template,
-                            namingMode: namingMode,
-                            isSelected: selectedSong?.id == template.id,
-                            selectedLetters: binding,
-                            selectedClef: clefBinding,
-                            onSelect: { selectedSong = template },
-                            onStart: {
-                                selectedSong = template
-                                onStart(template, binding.wrappedValue, clefBinding.wrappedValue)
-                            }
-                        )
+                let grouped = Dictionary(grouping: SongTemplate.library, by: \.level)
+                let levels = grouped.keys.sorted()
+                let resolvedLevel = activeLevel ?? levels.first
+
+                SongLevelTabBar(
+                    levels: levels,
+                    selectedLevel: resolvedLevel,
+                    onSelect: { activeLevel = $0 }
+                )
+
+                if let level = resolvedLevel {
+                    VStack(spacing: 12) {
+                        ForEach(grouped[level] ?? []) { template in
+                            SongCardView(
+                                template: template,
+                                isSelected: selectedSong?.id == template.id,
+                                onSelect: { selectedSong = template },
+                                onStart: {
+                                    selectedSong = template
+                                    onStart(template, template.allowedLetters, defaultClefMode)
+                                }
+                            )
+                        }
                     }
                 }
             }
         }
-        .cardStyle()
         .onChange(of: activeLevel) { newValue in
             guard let newValue, let current = selectedSong, current.level != newValue else { return }
             selectedSong = nil
@@ -1089,131 +1151,226 @@ struct SongSelectionCard: View {
 
 struct SongCardView: View {
     let template: SongTemplate
-    let namingMode: NoteNamingMode
     let isSelected: Bool
-    @Binding var selectedLetters: Set<NoteLetter>
-    @Binding var selectedClef: StaffClefMode
     let onSelect: () -> Void
     let onStart: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 8) {
+        Button(action: onSelect) {
+            VStack(alignment: .leading, spacing: 12) {
                 Text(template.title)
-                    .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.body))
-                    .foregroundColor(CuteTheme.textPrimary)
+                    .font(.system(size: 16, weight: .heavy, design: .rounded))
+                    .foregroundColor(KidTheme.textOnCardPrimary)
 
-                // Removed: BPM/Duration/Rhythm tags under song cards (per Jason request)
-            }
+                // Per latest product direction: remove clef selection + training note selection.
 
-            ZenDivider()
-
-            HStack(alignment: .center, spacing: 12) {
-                Text("Clef.Title")
-                    .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.caption))
-                    .foregroundColor(CuteTheme.textSecondary)
-                Spacer()
-                ZenClefPicker(selection: $selectedClef)
-            }
-
-            ZenDivider()
-
-            let letters = NoteLetter.allCases.filter { template.allowedLetters.contains($0) }
-            Text("Training Notes")
-                .font(.custom("AvenirNext-Regular", size: CuteTheme.FontSize.caption))
-                .foregroundColor(CuteTheme.textSecondary)
-
-            let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 7)
-            LazyVGrid(columns: columns, spacing: 6) {
-                ForEach(letters, id: \.self) { letter in
-                    Button(action: { toggle(letter) }) {
-                        ZenLetterChip(
-                            title: letter.displayName(for: namingMode),
-                            isSelected: selectedLetters.contains(letter)
+                Button(action: onStart) {
+                    Text("开始")
+                        .font(.system(size: 16, weight: .heavy, design: .rounded))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(
+                            LinearGradient(
+                                colors: [KidTheme.primary, KidTheme.primaryPressed],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                    }
-                    .buttonStyle(.plain)
+                        .cornerRadius(22)
+                        .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 8)
                 }
+                .buttonStyle(.plain)
             }
-
-            Button(action: onStart) {
-                Text("Start")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(ZenActionButtonStyle())
-            .disabled(selectedLetters.isEmpty)
-            .opacity(selectedLetters.isEmpty ? 0.5 : 1)
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 26)
+                    .fill(KidTheme.surfaceStrong)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 26)
+                            .stroke(isSelected ? KidTheme.primary.opacity(0.65) : Color.black.opacity(0.06), lineWidth: isSelected ? 2 : 1)
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.10), radius: 16, x: 0, y: 10)
         }
-        .cardStyle()
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(isSelected ? CuteTheme.accent : Color.clear, lineWidth: 2)
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onSelect()
-        }
+        .buttonStyle(.plain)
     }
+}
 
-    private func toggle(_ letter: NoteLetter) {
-        if selectedLetters.contains(letter) {
-            selectedLetters.remove(letter)
-        } else {
-            selectedLetters.insert(letter)
+// MARK: - SONG helpers (match LEVEL style)
+
+private struct SongLevelTabBar: View {
+    let levels: [Int]
+    let selectedLevel: Int?
+    let onSelect: (Int) -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ForEach(levels, id: \.self) { lvl in
+                let isSelected = (lvl == selectedLevel)
+                Button(action: { onSelect(lvl) }) {
+                    Text("L\(lvl)")
+                        .font(.system(size: 14, weight: .heavy, design: .rounded))
+                        .foregroundColor(isSelected ? .white : KidTheme.textOnCardPrimary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 36)
+                        .background(isSelected ? KidTheme.primary : KidTheme.surface)
+                        .cornerRadius(14)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(KidTheme.border, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 }
 
-struct NoteChipView: View {
-    let title: LocalizedStringKey
+private struct SongClefPicker: View {
+    @Binding var selection: StaffClefMode
+
+    var body: some View {
+        HStack(spacing: 8) {
+            clefButton(title: "Treble", mode: .treble)
+            clefButton(title: "Bass", mode: .bass)
+            clefButton(title: "Grand", mode: .grand)
+        }
+        .padding(6)
+        .background(KidTheme.surface)
+        .cornerRadius(18)
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(KidTheme.border, lineWidth: 1)
+        )
+    }
+
+    private func clefButton(title: String, mode: StaffClefMode) -> some View {
+        let isSelected = (selection == mode)
+        return Button(action: { selection = mode }) {
+            Text(title)
+                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .foregroundColor(isSelected ? .white : KidTheme.textOnCardPrimary)
+                .padding(.horizontal, 12)
+                .frame(height: 28)
+                .background(isSelected ? KidTheme.primary : Color.clear)
+                .cornerRadius(14)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct SongLetterChip: View {
+    let title: String
     let isSelected: Bool
-    let isDimmed: Bool
 
     var body: some View {
         Text(title)
-            .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.body))
-            .foregroundColor(foregroundColor)
+            .font(.system(size: 13, weight: .heavy, design: .rounded))
+            .foregroundColor(isSelected ? .white : KidTheme.textOnCardPrimary)
             .frame(maxWidth: .infinity, minHeight: 34)
-            .background(backgroundColor)
+            .background(isSelected ? KidTheme.primary : KidTheme.surface)
+            .cornerRadius(14)
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(borderColor, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(KidTheme.border, lineWidth: 1)
             )
-            .cornerRadius(12)
+    }
+}
+
+private struct RecordsCard: View {
+    @AppStorage(AppSettingsKeys.recordsTotalAnswered) private var totalAnswered: Int = 0
+    @AppStorage(AppSettingsKeys.recordsTotalCorrect) private var totalCorrect: Int = 0
+
+    private var accuracyPercent: Int {
+        guard totalAnswered > 0 else { return 0 }
+        return max(0, min(100, Int((Double(totalCorrect) / Double(totalAnswered) * 100).rounded())))
     }
 
-    private var foregroundColor: Color {
-        if isSelected {
-            return CuteTheme.textPrimary
-        }
-        if isDimmed {
-            return CuteTheme.textSecondary
-        }
-        return CuteTheme.textPrimary
-    }
+    var body: some View {
+        JellyCard(tint: KidTheme.primary) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .center, spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(KidTheme.primary.opacity(0.18))
+                            .frame(width: 56, height: 56)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                            )
 
-    private var backgroundColor: Color {
-        if isSelected {
-            return CuteTheme.chipSelectedFill
-        }
-        if isDimmed {
-            return CuteTheme.controlFill
-        }
-        return CuteTheme.chipFill
-    }
+                        Image(systemName: "chart.bar.xaxis")
+                            .font(.system(size: 22, weight: .heavy))
+                            .foregroundColor(Color.white.opacity(0.95))
+                    }
 
-    private var borderColor: Color {
-        if isSelected {
-            return CuteTheme.accent
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("RECORDS")
+                            .font(.system(size: 14, weight: .heavy, design: .rounded))
+                            .foregroundColor(KidTheme.textOnCardSecondary)
+
+                        Text("记录")
+                            .font(.system(size: 26, weight: .heavy, design: .rounded))
+                            .foregroundColor(KidTheme.textOnCardPrimary)
+                    }
+
+                    Spacer()
+
+                    Text("\(accuracyPercent)%")
+                        .font(.system(size: 22, weight: .heavy, design: .rounded))
+                        .foregroundColor(KidTheme.textOnCardPrimary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.white.opacity(0.14))
+                        .cornerRadius(14)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                        )
+                }
+
+                HStack(spacing: 12) {
+                    StatChip(title: "已答题", value: "\(totalAnswered)")
+                    StatChip(title: "答对", value: "\(totalCorrect)")
+                    StatChip(title: "答错", value: "\(max(0, totalAnswered - totalCorrect))")
+                }
+
+                Text("提示：现在只统计按钮输入的判定次数（之后可以加按模式统计/连续天数）。")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundColor(KidTheme.textOnCardSecondary)
+            }
         }
-        if isDimmed {
-            return CuteTheme.cardBorder
+    }
+}
+
+private struct StatChip: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .foregroundColor(KidTheme.textOnCardSecondary)
+            Text(value)
+                .font(.system(size: 18, weight: .heavy, design: .rounded))
+                .foregroundColor(KidTheme.textOnCardPrimary)
         }
-        return CuteTheme.chipBorder
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.10))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
     }
 }
 
 private extension View {
+    /// Legacy wrapper used by older cards. Keep it for untouched screens.
     func cardStyle() -> some View {
         self
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1221,3 +1378,4 @@ private extension View {
             .cuteCard()
     }
 }
+

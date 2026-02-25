@@ -20,7 +20,8 @@ struct SongModeView: View {
     @State private var showSettings: Bool = false
     @AppStorage(AppSettingsKeys.staffClefMode) private var staffClefModeRaw: String = StaffClefMode.treble.rawValue
     @AppStorage(AppSettingsKeys.showNoteName) private var showNoteName: Bool = false
-    @AppStorage(AppSettingsKeys.showJudgementNoteName) private var showJudgementNoteName: Bool = false
+    // Feedback note-name display removed per product direction.
+    private let showJudgementNoteName: Bool = false
     @AppStorage(AppSettingsKeys.useColoredKeys) private var useColoredKeys: Bool = true
     @AppStorage(AppSettingsKeys.useColoredNotes) private var useColoredNotes: Bool = false
 
@@ -39,6 +40,8 @@ struct SongModeView: View {
     private var microphoneInputEnabled: Bool { false }
     private var midiInputEnabled: Bool { false }
     private let clefModeOverride: StaffClefMode?
+    private let isSongTraining: Bool
+    private let recordMode: TrainingModeRecord
 
     private var staffClefMode: StaffClefMode {
         if let clefModeOverride {
@@ -56,12 +59,16 @@ struct SongModeView: View {
         namingMode: Binding<NoteNamingMode>,
         clefMode: StaffClefMode? = nil,
         onChangeClef: ((StaffClefMode, Double) -> Void)? = nil,
+        isSongTraining: Bool = false,
+        recordMode: TrainingModeRecord = .songs,
         onExit: @escaping () -> Void
     ) {
-        _viewModel = StateObject(wrappedValue: SongViewModel(song: song))
+        _viewModel = StateObject(wrappedValue: SongViewModel(song: song, recordMode: recordMode))
         _namingMode = namingMode
         clefModeOverride = clefMode
         self.onChangeClef = onChangeClef
+        self.isSongTraining = isSongTraining
+        self.recordMode = recordMode
         self.onExit = onExit
         _bpmDraft = State(initialValue: song.bpm)
     }
@@ -72,8 +79,9 @@ struct SongModeView: View {
             let contentPadding: CGFloat = isLandscape ? 8 : 6
             let usesGrandStaff = staffClefMode == .grand
             let staffHeight = min(
-                proxy.size.height * (usesGrandStaff ? (isLandscape ? 0.5 : 0.6) : (isLandscape ? 0.38 : 0.45)),
-                usesGrandStaff ? (isLandscape ? 280 : 320) : (isLandscape ? 220 : 260)
+                // Grand staff needs to be more compact so the keyboard never gets pushed off-screen.
+                proxy.size.height * (usesGrandStaff ? (isLandscape ? 0.46 : 0.50) : (isLandscape ? 0.38 : 0.45)),
+                usesGrandStaff ? (isLandscape ? 260 : 280) : (isLandscape ? 220 : 260)
             )
             let noteScale = CGFloat(viewModel.noteScale) * (isLandscape ? 0.95 : 0.85)
 
@@ -90,10 +98,11 @@ struct SongModeView: View {
             let proposedKeyboardHeight = min(260, max(220, remaining))
 
             ZStack {
-                VStack(spacing: 6) {
-                    VStack(spacing: 6) {
+                VStack(spacing: 10) {
+                    VStack(spacing: 10) {
                         SongNavigationBar(
                             isPaused: viewModel.isPaused,
+                            title: isSongTraining ? "SONG" : "PRACTICE",
                             onBack: onExit,
                             onTogglePause: {
                                 viewModel.togglePause()
@@ -103,12 +112,9 @@ struct SongModeView: View {
                             }
                         )
 
-                        // Merge all top controls into ONE compact card (方案 A).
-                        ControlCard(padding: 8) {
-                            VStack(spacing: 6) {
-                                // ui rev marker removed
-                                // header removed
-
+                        // Top controls (glass card)
+                        JellyCard {
+                            VStack(spacing: 10) {
                                 BpmControlView(bpm: $bpmDraft, onCommit: { value in
                                     viewModel.restart(withBpm: value)
                                 })
@@ -135,26 +141,27 @@ struct SongModeView: View {
                         }
                     )
 
-                    ScrollingStaffView(
-                        events: viewModel.events,
-                        currentTime: viewModel.currentTime,
-                        scrollConfig: viewModel.scrollConfig,
-                        noteScale: noteScale,
-                        scrollSpeedMultiplier: viewModel.scrollSpeedMultiplier,
-                        lastJudgement: viewModel.lastJudgement,
-                        lastJudgementTime: viewModel.lastJudgementTime,
-                        lastJudgementLetter: viewModel.lastJudgementLetter,
-                        clefMode: staffClefMode,
-                        showNoteName: showNoteName,
-                        showJudgementNoteName: showJudgementNoteName,
-                        useColoredNotes: useColoredNotes,
-                        displayRhythmMode: displayRhythmMode,
-                        namingMode: namingMode
-                    )
-                    .frame(maxWidth: .infinity, minHeight: staffHeight, maxHeight: staffHeight)
-                    .layoutPriority(1)
-                    .padding(.horizontal, 6)
-                    .cuteCard()
+                    JellyCard {
+                        ScrollingStaffView(
+                            events: viewModel.events,
+                            currentTime: viewModel.currentTime,
+                            scrollConfig: viewModel.scrollConfig,
+                            noteScale: noteScale,
+                            scrollSpeedMultiplier: viewModel.scrollSpeedMultiplier,
+                            lastJudgement: viewModel.lastJudgement,
+                            lastJudgementTime: viewModel.lastJudgementTime,
+                            lastJudgementLetter: viewModel.lastJudgementLetter,
+                            clefMode: staffClefMode,
+                            showNoteName: showNoteName,
+                            showJudgementNoteName: showJudgementNoteName,
+                            useColoredNotes: useColoredNotes,
+                            displayRhythmMode: displayRhythmMode,
+                            namingMode: namingMode
+                        )
+                        .frame(maxWidth: .infinity, minHeight: staffHeight, maxHeight: staffHeight)
+                        .layoutPriority(1)
+                        .padding(.horizontal, 6)
+                    }
 
                     PianoKeyboardInputView(namingMode: namingMode, useColoredKeys: resolvedUseColoredKeys) { letter in
                         guard !microphoneInputEnabled else { return }
@@ -181,6 +188,7 @@ struct SongModeView: View {
                 }
                 .padding(contentPadding)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .kidBackground()
                 .onPreferenceChange(HeightKey.self) { newValue in
                     if abs(newValue - topContentHeight) > 1 {
                         topContentHeight = newValue
@@ -190,13 +198,20 @@ struct SongModeView: View {
                 .onChange(of: proxy.size) { _ in stableKeyboardHeight = proposedKeyboardHeight }
                 .onChange(of: topContentHeight) { _ in stableKeyboardHeight = proposedKeyboardHeight }
                 .onAppear {
-                    viewModel.start()
+                    // Keep the staff intro delay in sync with ScrollingStaffView.
+                    // Important: delay the model clock too, otherwise judgement happens before the note reaches the line.
+                    let introDelay: TimeInterval = 2.0
+                    viewModel.stop()
                     bpmDraft = viewModel.bpm
-                    if microphoneInputEnabled {
-                        micDetector.start()
-                    }
-                    if midiInputEnabled {
-                        midiDetector.start()
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + introDelay) {
+                        viewModel.start()
+                        if microphoneInputEnabled {
+                            micDetector.start()
+                        }
+                        if midiInputEnabled {
+                            midiDetector.start()
+                        }
                     }
                 }
                 .onDisappear {
@@ -277,6 +292,7 @@ struct SongModeView: View {
                 AppSettingsSheetView()
             }
         }
+        .recordSession(mode: recordMode)
     }
 }
 
@@ -303,6 +319,7 @@ struct ControlCard<Content: View>: View {
 
 struct SongNavigationBar: View {
     let isPaused: Bool
+    let title: String
     let onBack: () -> Void
     let onTogglePause: () -> Void
     let onOpenSettings: () -> Void
@@ -314,14 +331,14 @@ struct SongNavigationBar: View {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 16, weight: .semibold))
                         .frame(width: 36, height: 36)
-                        .background(CuteTheme.controlFill)
+                        .background(KidTheme.surfaceStrong)
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(CuteTheme.cardBorder, lineWidth: 1)
+                                .stroke(KidTheme.border, lineWidth: 1)
                         )
                 }
-                .foregroundColor(CuteTheme.textPrimary)
+                .foregroundColor(KidTheme.textOnBackgroundPrimary)
 
                 Spacer()
 
@@ -330,34 +347,33 @@ struct SongNavigationBar: View {
                         Image(systemName: "gearshape.fill")
                             .font(.system(size: 14, weight: .semibold))
                             .frame(width: 36, height: 36)
-                            .background(CuteTheme.controlFill)
+                            .background(KidTheme.surfaceStrong)
                             .cornerRadius(12)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(CuteTheme.cardBorder, lineWidth: 1)
+                                    .stroke(KidTheme.border, lineWidth: 1)
                             )
                     }
-                    .foregroundColor(CuteTheme.textPrimary)
+                    .foregroundColor(KidTheme.textOnBackgroundPrimary)
 
                     Button(action: onTogglePause) {
                         Image(systemName: isPaused ? "play.fill" : "pause.fill")
                             .font(.system(size: 14, weight: .semibold))
                             .frame(width: 36, height: 36)
-                            .background(CuteTheme.controlFill)
+                            .background(KidTheme.surfaceStrong)
                             .cornerRadius(12)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(CuteTheme.cardBorder, lineWidth: 1)
+                                    .stroke(KidTheme.border, lineWidth: 1)
                             )
                     }
-                    .foregroundColor(CuteTheme.textPrimary)
+                    .foregroundColor(KidTheme.textOnBackgroundPrimary)
                 }
             }
 
-            let statusKey: LocalizedStringKey = isPaused ? "Paused" : "Practice"
-            Text(statusKey == "Practice" ? "PRACTICE" : statusKey)
+            Text(isPaused ? "Paused" : title)
                 .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundColor(CuteTheme.textPrimary)
+                .foregroundColor(KidTheme.textOnBackgroundPrimary)
                 .frame(maxWidth: .infinity, alignment: .center)
         }
     }
@@ -395,17 +411,18 @@ struct BpmControlView: View {
     let onCommit: (Double) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("BPM")
                     .font(.system(size: CuteTheme.FontSize.caption, weight: .semibold, design: .rounded))
-                    .foregroundColor(CuteTheme.textPrimary)
+                    .foregroundColor(KidTheme.textOnCardSecondary)
                 Spacer()
                 Text("\(Int(bpm))")
                     .font(.system(size: CuteTheme.FontSize.caption, weight: .semibold, design: .rounded))
-                    .foregroundColor(CuteTheme.textPrimary)
+                    .foregroundColor(KidTheme.textOnCardPrimary)
             }
 
+            // Keep it soft: no inner white card; JellyCard provides the container.
             Slider(
                 value: $bpm,
                 in: 30...200,
@@ -416,33 +433,32 @@ struct BpmControlView: View {
                     }
                 }
             )
-            .tint(CuteTheme.accent)
+            .tint(KidTheme.accent)
 
             let presets = [30, 60, 80, 100, 120]
             HStack(spacing: 8) {
                 ForEach(presets, id: \.self) { value in
+                    let isSelected = Int(bpm) == value
                     Button(action: {
                         bpm = Double(value)
                         onCommit(bpm)
                     }) {
                         Text("\(value)")
                             .font(.system(size: CuteTheme.FontSize.caption, weight: .semibold, design: .rounded))
-                            .foregroundColor(Int(bpm) == value ? .white : CuteTheme.textPrimary)
-                            .frame(maxWidth: .infinity, minHeight: 30)
-                            .background(Int(bpm) == value ? CuteTheme.accent : CuteTheme.controlFill)
-                            .cornerRadius(9)
+                            .foregroundColor(isSelected ? KidTheme.textOnBackgroundPrimary : KidTheme.textOnCardPrimary)
+                            .frame(maxWidth: .infinity, minHeight: 32)
+                            .background(isSelected ? KidTheme.accent : KidTheme.surface)
+                            .cornerRadius(10)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(KidTheme.border, lineWidth: 1)
+                            )
                     }
                     .buttonStyle(.plain)
                 }
             }
         }
-        .padding(10)
-        .background(CuteTheme.cardBackground)
-        .cornerRadius(14)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(CuteTheme.cardBorder, lineWidth: 1)
-        )
+        .padding(.vertical, 4)
     }
 }
 
@@ -456,13 +472,13 @@ struct NamingModePicker: View {
                 Button(action: { namingMode = mode }) {
                     VStack(spacing: 8) {
                         Text(mode.segmentTitle)
-                            .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.body))
-                            .foregroundColor(namingMode == mode ? CuteTheme.textPrimary : CuteTheme.textSecondary)
+                            .font(.custom("AvenirNext-DemiBold", size: KidTheme.FontSize.body))
+                            .foregroundColor(namingMode == mode ? KidTheme.textOnCardPrimary : KidTheme.textOnCardSecondary)
                             .frame(maxWidth: .infinity)
 
-                        // Long underline like the reference screenshot
+                        // Underline should match the global UI palette (avoid green/pink).
                         Rectangle()
-                            .fill(namingMode == mode ? CuteTheme.accent : Color.clear)
+                            .fill(namingMode == mode ? KidTheme.primary : Color.clear)
                             .frame(height: 3)
                             .cornerRadius(2)
                             .padding(.horizontal, 6)
@@ -542,35 +558,36 @@ struct ResultOverlayView: View {
     var body: some View {
         let percentage = max(0, min(Int((accuracy * 100).rounded()), 100))
 
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             Text("Accuracy")
-                .font(.custom("AvenirNext-DemiBold", size: CuteTheme.FontSize.title))
-                .foregroundColor(CuteTheme.textPrimary)
+                .font(.system(size: KidTheme.FontSize.subtitle, weight: .heavy, design: .rounded))
+                .foregroundColor(KidTheme.textOnCardSecondary)
 
             Text("\(percentage)%")
-                .font(.custom("AvenirNext-Bold", size: 36))
-                .foregroundColor(CuteTheme.textPrimary)
+                .font(.system(size: 42, weight: .heavy, design: .rounded))
+                .foregroundColor(KidTheme.textOnCardPrimary)
 
             Button(action: onRestart) {
                 Text("Restart")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(SecondaryButtonStyle())
+            .buttonStyle(JellyButtonStyle(kind: .secondary))
 
             Button(action: onDone) {
                 Text("Done")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(PrimaryButtonStyle())
+            .buttonStyle(JellyTintButtonStyle(tint: KidTheme.accent))
         }
-        .padding(24)
-        .frame(maxWidth: 320)
-        .background(CuteTheme.cardBackground)
-        .cornerRadius(20)
+        .padding(22)
+        .frame(maxWidth: 340)
+        .background(KidTheme.surfaceStrong)
+        .cornerRadius(KidTheme.Radius.card)
         .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(CuteTheme.cardBorder, lineWidth: 1)
+            RoundedRectangle(cornerRadius: KidTheme.Radius.card)
+                .stroke(KidTheme.border, lineWidth: 1)
         )
+        .shadow(color: KidTheme.shadow.opacity(0.75), radius: 18, x: 0, y: 12)
     }
 }
 

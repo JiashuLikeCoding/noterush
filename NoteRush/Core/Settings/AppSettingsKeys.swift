@@ -17,6 +17,10 @@ enum AppSettingsKeys {
     static let microphoneInputEnabled = "microphoneInputEnabled" // legacy
     static let midiInputEnabled = "midiInputEnabled" // legacy
     static let inputMode = "inputMode"
+
+    // MARK: - Records (cumulative stats)
+    static let recordsTotalAnswered = "recordsTotalAnswered"
+    static let recordsTotalCorrect = "recordsTotalCorrect"
 }
 
 enum InputMode: String, CaseIterable, Identifiable {
