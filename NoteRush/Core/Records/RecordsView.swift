@@ -65,7 +65,8 @@ struct RecordsView: View {
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
                     // Page-style TabView needs an explicit height in a VStack; otherwise it may collapse to 0.
-                    .frame(height: scope == .day ? 380 : 420)
+                    // Make it tall enough that Weekly/Monthly views can show their chart without being cut off.
+                    .frame(height: 720)
                     .frame(maxWidth: .infinity)
                 }
             }
@@ -432,7 +433,7 @@ private struct CheckInMonthPager: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 320)
+            .frame(height: 300)
         }
     }
 }
@@ -515,7 +516,7 @@ private struct CheckInWeekPager: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 180)
+            .frame(height: 200)
         }
     }
 }
@@ -663,7 +664,7 @@ private struct WeeklyAccuracyChart: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("每周正确率")
+            Text("正确率趋势")
                 .font(.system(size: 14, weight: .heavy, design: .rounded))
                 .foregroundColor(KidTheme.textOnCardPrimary)
 
@@ -720,7 +721,7 @@ private struct MonthlyAccuracyChart: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("每月正确率")
+            Text("正确率趋势")
                 .font(.system(size: 14, weight: .heavy, design: .rounded))
                 .foregroundColor(KidTheme.textOnCardPrimary)
 
