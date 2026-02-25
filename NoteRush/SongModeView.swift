@@ -279,13 +279,20 @@ struct SongModeView: View {
                 }
 
                 if viewModel.isFinished {
-                    let rows: [(title: String, wrong: Int, attempts: Int)] = (recordMode == .levels)
-                        ? viewModel.levelReportRows.map { (title: $0.title, wrong: $0.wrong, attempts: $0.attempts) }
-                        : []
+                    let rows: [(label: String, wrong: Int)] = {
+                        guard recordMode == .levels else { return [] }
+                        return viewModel.levelReportRows
+                            .filter { $0.wrong > 0 }
+                            .map { row in
+                                let note = row.note
+                                let label = "\(note.letter.displayName(for: namingMode))\(note.octave)"
+                                return (label: label, wrong: row.wrong)
+                            }
+                    }()
 
                     ResultOverlayView(
                         accuracy: viewModel.accuracy,
-                        reportTitle: (recordMode == .levels ? "训练报告（每个音错了多少次）" : nil),
+                        reportTitle: (recordMode == .levels ? "训练报告" : nil),
                         reportRows: rows,
                         onRestart: {
                             viewModel.restart()
@@ -615,7 +622,7 @@ struct PauseOverlayView: View {
 struct ResultOverlayView: View {
     let accuracy: Double
     let reportTitle: String?
-    let reportRows: [(title: String, wrong: Int, attempts: Int)]
+    let reportRows: [(label: String, wrong: Int)]
     let onRestart: () -> Void
     let onDone: () -> Void
 
@@ -637,20 +644,25 @@ struct ResultOverlayView: View {
                         .font(.system(size: 13, weight: .heavy, design: .rounded))
                         .foregroundColor(KidTheme.textOnCardPrimary)
 
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 8) {
                         let topRows = Array(reportRows.prefix(6))
                         ForEach(topRows.indices, id: \ .self) { i in
                             let row = topRows[i]
-                            HStack {
-                                Text(row.title)
-                                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                            HStack(spacing: 10) {
+                                Text(row.label)
+                                    .font(.system(size: 13, weight: .heavy, design: .rounded))
                                     .foregroundColor(KidTheme.textOnCardPrimary)
 
-                                Spacer()
+                                Spacer(minLength: 8)
 
-                                Text("错 \(row.wrong)/\(max(1, row.attempts))")
-                                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                                    .foregroundColor(KidTheme.textOnCardSecondary)
+                                Text("错 \(row.wrong)次")
+                                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                                    .foregroundColor(Color.white)
+                                    .padding(.vertical, 6)
+                                    .padding(.horizontal, 10)
+                                    .background(
+                                        Capsule().fill(Color.red.opacity(0.85))
+                                    )
                             }
                         }
 
@@ -662,9 +674,9 @@ struct ResultOverlayView: View {
                     }
                     .padding(12)
                     .background(KidTheme.surface)
-                    .cornerRadius(14)
+                    .cornerRadius(16)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: 16)
                             .stroke(KidTheme.border, lineWidth: 1)
                     )
                 }

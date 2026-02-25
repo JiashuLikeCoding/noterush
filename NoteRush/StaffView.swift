@@ -1011,7 +1011,7 @@ final class SongViewModel: ObservableObject {
 
     struct LevelReportRow: Identifiable {
         let id: String
-        let title: String
+        let note: StaffNote
         let attempts: Int
         let wrong: Int
     }
@@ -1021,17 +1021,18 @@ final class SongViewModel: ObservableObject {
         return levelNoteById.values
             .map { note in
                 let id = note.id
-                let title = "\(note.letter.rawValue.uppercased())\(note.octave)"
                 return LevelReportRow(
                     id: id,
-                    title: title,
+                    note: note,
                     attempts: levelAttemptCounts[id] ?? 0,
                     wrong: levelWrongCounts[id] ?? 0
                 )
             }
             .sorted { a, b in
                 if a.wrong != b.wrong { return a.wrong > b.wrong }
-                return a.title < b.title
+                // stable fallback
+                if a.note.diatonicIndex != b.note.diatonicIndex { return a.note.diatonicIndex < b.note.diatonicIndex }
+                return a.id < b.id
             }
     }
 }
