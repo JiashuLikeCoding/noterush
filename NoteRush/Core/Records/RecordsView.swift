@@ -164,8 +164,10 @@ private struct RecordsModePage: View {
                     CheckInTodayRow()
                 case .week:
                     CheckInWeekPager()
+                    WeeklyAccuracyChart(mode: mode)
                 case .month:
                     CheckInMonthPager()
+                    MonthlyAccuracyChart(mode: mode)
                 }
             }
             .padding(.bottom, 10)
@@ -637,6 +639,120 @@ private struct MonthlyCharts: View {
                 }
             }
             .frame(height: 170)
+            .padding(.vertical, 6)
+        }
+    }
+}
+
+private struct WeeklyAccuracyChart: View {
+    let mode: TrainingModeRecord
+    @StateObject private var store = RecordsStore.shared
+
+    struct WeekPoint: Identifiable {
+        let id = UUID()
+        let weekStart: Date
+        let accuracy: Double
+        let answered: Int
+    }
+
+    private var points: [WeekPoint] {
+        store.weeks(mode: mode, count: 12).map { d, s in
+            WeekPoint(weekStart: d, accuracy: s.accuracy, answered: s.answered)
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("每周正确率")
+                .font(.system(size: 14, weight: .heavy, design: .rounded))
+                .foregroundColor(KidTheme.textOnCardPrimary)
+
+            Chart(points) { p in
+                LineMark(
+                    x: .value("Week", p.weekStart),
+                    y: .value("Accuracy", p.accuracy)
+                )
+                .foregroundStyle(KidTheme.textOnCardPrimary.opacity(0.95))
+                .lineStyle(StrokeStyle(lineWidth: 2.5))
+                .interpolationMethod(.catmullRom)
+
+                PointMark(
+                    x: .value("Week", p.weekStart),
+                    y: .value("Accuracy", p.accuracy)
+                )
+                .foregroundStyle(KidTheme.accent.opacity(0.85))
+            }
+            .chartYAxis {
+                AxisMarks(position: .leading) { _ in
+                    AxisGridLine().foregroundStyle(Color.black.opacity(0.08))
+                    AxisValueLabel().foregroundStyle(KidTheme.textOnCardSecondary)
+                }
+            }
+            .chartXAxis {
+                AxisMarks { _ in
+                    AxisGridLine().foregroundStyle(Color.black.opacity(0.08))
+                    AxisValueLabel().foregroundStyle(KidTheme.textOnCardSecondary)
+                }
+            }
+            .chartYScale(domain: 0...1)
+            .frame(height: 140)
+            .padding(.vertical, 6)
+        }
+    }
+}
+
+private struct MonthlyAccuracyChart: View {
+    let mode: TrainingModeRecord
+    @StateObject private var store = RecordsStore.shared
+
+    struct MonthPoint: Identifiable {
+        let id = UUID()
+        let monthStart: Date
+        let accuracy: Double
+        let answered: Int
+    }
+
+    private var points: [MonthPoint] {
+        store.months(mode: mode, count: 12).map { d, s in
+            MonthPoint(monthStart: d, accuracy: s.accuracy, answered: s.answered)
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("每月正确率")
+                .font(.system(size: 14, weight: .heavy, design: .rounded))
+                .foregroundColor(KidTheme.textOnCardPrimary)
+
+            Chart(points) { p in
+                LineMark(
+                    x: .value("Month", p.monthStart, unit: .month),
+                    y: .value("Accuracy", p.accuracy)
+                )
+                .foregroundStyle(KidTheme.textOnCardPrimary.opacity(0.95))
+                .lineStyle(StrokeStyle(lineWidth: 2.5))
+                .interpolationMethod(.catmullRom)
+
+                PointMark(
+                    x: .value("Month", p.monthStart, unit: .month),
+                    y: .value("Accuracy", p.accuracy)
+                )
+                .foregroundStyle(KidTheme.accent.opacity(0.85))
+            }
+            .chartYAxis {
+                AxisMarks(position: .leading) { _ in
+                    AxisGridLine().foregroundStyle(Color.black.opacity(0.08))
+                    AxisValueLabel().foregroundStyle(KidTheme.textOnCardSecondary)
+                }
+            }
+            .chartXAxis {
+                AxisMarks { _ in
+                    AxisGridLine().foregroundStyle(Color.black.opacity(0.08))
+                    AxisValueLabel().foregroundStyle(KidTheme.textOnCardSecondary)
+                }
+            }
+            .chartYScale(domain: 0...1)
+            .frame(height: 140)
             .padding(.vertical, 6)
         }
     }
