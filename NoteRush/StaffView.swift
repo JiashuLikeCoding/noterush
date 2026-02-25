@@ -670,8 +670,13 @@ final class SongViewModel: ObservableObject {
     // LEVEL mode: per-staff-note goal (octave-specific)
     // Product direction: each note appears a fixed number of times; progress increases even on wrong.
     private let requiredCorrectPerNote: Int = 2
-    @Published private(set) var levelCounts: [String: Int] = [:] // StaffNote.id -> progress (0..3)
+    @Published private(set) var levelCounts: [String: Int] = [:] // StaffNote.id -> progress (0..N)
     @Published private(set) var levelActivePool: [StaffNote] = []
+
+    // LEVEL report
+    @Published private(set) var levelAttemptCounts: [String: Int] = [:] // StaffNote.id -> attempts
+    @Published private(set) var levelWrongCounts: [String: Int] = [:]   // StaffNote.id -> wrong attempts
+    private var levelNoteById: [String: StaffNote] = [:]
 
     /// LEVEL progress is tracked as "steps": each unique staff note must be answered N times.
     /// Progress increases even on wrong.
@@ -726,7 +731,10 @@ final class SongViewModel: ObservableObject {
             levelGoalTotal = levelInitialNoteCount * requiredCorrectPerNote
             levelGoalCompleted = 0
             for n in levelActivePool {
+                levelNoteById[n.id] = n
                 levelCounts[n.id] = 0
+                levelAttemptCounts[n.id] = 0
+                levelWrongCounts[n.id] = 0
             }
 
             // Build a fixed sequence where each note appears exactly N times.
@@ -956,8 +964,15 @@ final class SongViewModel: ObservableObject {
     private func applyLevelProgress(for note: StaffNote, correct: Bool) {
         guard recordMode == .levels else { return }
 
-        // Product direction: wrong answers still advance progress.
         let id = note.id
+
+        // Report counters
+        levelAttemptCounts[id, default: 0] += 1
+        if !correct {
+            levelWrongCounts[id, default: 0] += 1
+        }
+
+        // Product direction: wrong answers still advance progress.
         let cur = levelCounts[id] ?? 0
         let next = min(requiredCorrectPerNote, cur + 1)
         levelCounts[id] = next
@@ -971,9 +986,6 @@ final class SongViewModel: ObservableObject {
         // Keep these published values in sync for the UI progress display.
         levelGoalTotal = levelInitialNoteCount * requiredCorrectPerNote
         levelGoalCompleted = min(levelGoalTotal, levelCounts.values.reduce(0, +))
-
-        // Note: `correct` is still used for accuracy (judgements/Records), even though progress advances either way.
-        _ = correct
     }
 
     private func refreshUpcomingEventsReplacingCompleted() {
@@ -995,6 +1007,32 @@ final class SongViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    struct LevelReportRow: Identifiable {
+        let id: String
+        let title: String
+        let attempts: Int
+        let wrong: Int
+    }
+
+    var levelReportRows: [LevelReportRow] {
+        guard recordMode == .levels else { return [] }
+        return levelNoteById.values
+            .map { note in
+                let id = note.id
+                let title = "\(note.letter.rawValue.uppercased())\(note.octave)"
+                return LevelReportRow(
+                    id: id,
+                    title: title,
+                    attempts: levelAttemptCounts[id] ?? 0,
+                    wrong: levelWrongCounts[id] ?? 0
+                )
+            }
+            .sorted { a, b in
+                if a.wrong != b.wrong { return a.wrong > b.wrong }
+                return a.title < b.title
+            }
     }
 }
 

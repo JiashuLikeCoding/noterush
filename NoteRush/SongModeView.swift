@@ -279,8 +279,14 @@ struct SongModeView: View {
                 }
 
                 if viewModel.isFinished {
+                    let rows: [(title: String, wrong: Int, attempts: Int)] = (recordMode == .levels)
+                        ? viewModel.levelReportRows.map { (title: $0.title, wrong: $0.wrong, attempts: $0.attempts) }
+                        : []
+
                     ResultOverlayView(
                         accuracy: viewModel.accuracy,
+                        reportTitle: (recordMode == .levels ? "训练报告（每个音错了多少次）" : nil),
+                        reportRows: rows,
                         onRestart: {
                             viewModel.restart()
                             if microphoneInputEnabled {
@@ -608,6 +614,8 @@ struct PauseOverlayView: View {
 
 struct ResultOverlayView: View {
     let accuracy: Double
+    let reportTitle: String?
+    let reportRows: [(title: String, wrong: Int, attempts: Int)]
     let onRestart: () -> Void
     let onDone: () -> Void
 
@@ -622,6 +630,46 @@ struct ResultOverlayView: View {
             Text("\(percentage)%")
                 .font(.system(size: 42, weight: .heavy, design: .rounded))
                 .foregroundColor(KidTheme.textOnCardPrimary)
+
+            if let reportTitle, !reportRows.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(reportTitle)
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .foregroundColor(KidTheme.textOnCardPrimary)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        let topRows = Array(reportRows.prefix(6))
+                        ForEach(topRows.indices, id: \ .self) { i in
+                            let row = topRows[i]
+                            HStack {
+                                Text(row.title)
+                                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                                    .foregroundColor(KidTheme.textOnCardPrimary)
+
+                                Spacer()
+
+                                Text("错 \(row.wrong)/\(max(1, row.attempts))")
+                                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                    .foregroundColor(KidTheme.textOnCardSecondary)
+                            }
+                        }
+
+                        if reportRows.count > 6 {
+                            Text("…")
+                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .foregroundColor(KidTheme.textOnCardSecondary)
+                        }
+                    }
+                    .padding(12)
+                    .background(KidTheme.surface)
+                    .cornerRadius(14)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(KidTheme.border, lineWidth: 1)
+                    )
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
 
             Button(action: onRestart) {
                 Text("Restart")
