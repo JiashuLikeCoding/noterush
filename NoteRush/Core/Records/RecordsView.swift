@@ -270,6 +270,15 @@ private struct DailyCharts: View {
                 .lineStyle(StrokeStyle(lineWidth: 2))
                 .interpolationMethod(.catmullRom)
             }
+            // Allow swipe/drag to pan horizontally through time.
+            .chartScrollableAxes(.horizontal)
+            // Show ~10 days at a time; user can swipe for the rest.
+            .chartXVisibleDomain(length: 60 * 60 * 24 * 10)
+            .chartScrollTargetBehavior(
+                .valueAligned(
+                    matching: DateComponents(day: 1)
+                )
+            )
             .chartXAxis {
                 AxisMarks { _ in
                     AxisGridLine().foregroundStyle(Color.black.opacity(0.08))
