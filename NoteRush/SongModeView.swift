@@ -285,7 +285,15 @@ struct SongModeView: View {
                             .filter { $0.wrong > 0 }
                             .map { row in
                                 let note = row.note
-                                let label = "\(note.letter.displayName(for: namingMode))\(note.octave)"
+                                let letter = note.letter.rawValue.uppercased()
+                                let label: String
+                                if namingMode == .letters {
+                                    // 普通人更容易看懂的字母音名
+                                    label = "\(letter)\(note.octave)"
+                                } else {
+                                    // Do Re Mi 模式：同时给出字母音名，避免用户不理解 Fa/Sol 等
+                                    label = "\(note.letter.displayName(for: namingMode))（\(letter)\(note.octave)）"
+                                }
                                 return (label: label, wrong: row.wrong)
                             }
                     }()
