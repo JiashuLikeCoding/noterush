@@ -53,23 +53,17 @@ struct RecordsView: View {
 
                     ModePicker(mode: $mode)
 
-                    ScopePicker(scope: $scope)
-
-                    let streak = store.streakDays(mode: mode)
-                    let today = store.stats(mode: mode, date: Date())
-
-                    HStack(spacing: 12) {
-                        StatChip(title: "今日答题", value: "\(today.answered)")
-                        StatChip(title: "今日正确率", value: "\(Int((today.accuracy * 100).rounded()))%")
-                        StatChip(title: "连续天数", value: "\(streak)")
+                    TabView(selection: $mode) {
+                        ForEach(TrainingModeRecord.allCases) { m in
+                            RecordsModePage(mode: m, scope: $scope)
+                                .tag(m)
+                                .padding(.top, 2)
+                                .padding(.horizontal, 1)
+                        }
                     }
-
-                    if scope == .day {
-                        HeatmapGrid(mode: mode, days: store.lastNDays(mode: mode, n: 91))
-                        DailyCharts(mode: mode)
-                    } else {
-                        MonthlyCharts(mode: mode)
-                    }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .frame(maxWidth: .infinity)
+                    .clipped()
                 }
             }
 
@@ -104,6 +98,35 @@ private struct ModePicker: View {
                 .buttonStyle(.plain)
             }
         }
+    }
+}
+
+private struct RecordsModePage: View {
+    let mode: TrainingModeRecord
+    @Binding var scope: RecordsView.Scope
+    @StateObject private var store = RecordsStore.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ScopePicker(scope: $scope)
+
+            let streak = store.streakDays(mode: mode)
+            let today = store.stats(mode: mode, date: Date())
+
+            HStack(spacing: 12) {
+                StatChip(title: "今日答题", value: "\(today.answered)")
+                StatChip(title: "今日正确率", value: "\(Int((today.accuracy * 100).rounded()))%")
+                StatChip(title: "连续天数", value: "\(streak)")
+            }
+
+            if scope == .day {
+                HeatmapGrid(mode: mode, days: store.lastNDays(mode: mode, n: 91))
+                DailyCharts(mode: mode)
+            } else {
+                MonthlyCharts(mode: mode)
+            }
+        }
+        .padding(.bottom, 2)
     }
 }
 
