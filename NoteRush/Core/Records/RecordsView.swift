@@ -170,6 +170,7 @@ private struct RecordsModePage: View {
                     MonthlyAccuracyChart(mode: mode)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .padding(.bottom, 8)
     }
 }
