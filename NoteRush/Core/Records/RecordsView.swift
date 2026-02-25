@@ -436,6 +436,17 @@ private struct CheckInWeekPage: View {
                 CheckInLegendRow()
             }
 
+            // Weekday labels
+            LazyVGrid(columns: columns, spacing: 4) {
+                let labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+                ForEach(0..<labels.count, id: \.self) { i in
+                    Text(labels[i])
+                        .font(.system(size: 11, weight: .heavy, design: .rounded))
+                        .foregroundColor(KidTheme.textOnCardSecondary)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+
             LazyVGrid(columns: columns, spacing: 4) {
                 ForEach(0..<days.count, id: \.self) { i in
                     let d = days[i]
