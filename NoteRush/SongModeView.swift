@@ -456,9 +456,7 @@ private struct LevelGoalProgressView: View {
                     .stroke(KidTheme.border, lineWidth: 1)
             )
 
-            Text("规则：每个音（包含八度）答对 3 次；答错 -1；满 3 次后不再出现")
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundColor(KidTheme.textOnCardSecondary)
+            // Rule text hidden per product direction.
         }
         .padding(.bottom, 2)
     }
