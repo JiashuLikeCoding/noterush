@@ -1093,16 +1093,26 @@ private struct PianoTouchKey: View {
         content
             .frame(width: width, height: height)
             .contentShape(Rectangle())
-            // Pressed appearance: inner shading only (no movement) to avoid "shorter key" clipping.
+            // Pressed appearance: stronger shading + tint + outline (more obvious, no movement).
             .overlay(
                 VStack(spacing: 0) {
-                    Rectangle().fill(Color.black.opacity(isPressed ? (isBlack ? 0.28 : 0.10) : 0))
-                        .frame(height: isBlack ? 8 : 10)
-                    Rectangle().fill(Color.black.opacity(isPressed ? (isBlack ? 0.14 : 0.06) : 0))
-                    Rectangle().fill(Color.white.opacity(isPressed ? (isBlack ? 0.05 : 0.10) : 0))
+                    Rectangle().fill(Color.black.opacity(isPressed ? (isBlack ? 0.42 : 0.16) : 0))
+                        .frame(height: isBlack ? 10 : 12)
+                    Rectangle().fill(Color.black.opacity(isPressed ? (isBlack ? 0.22 : 0.10) : 0))
+                    Rectangle().fill(Color.white.opacity(isPressed ? (isBlack ? 0.06 : 0.14) : 0))
                         .frame(height: isBlack ? 2 : 3)
                 }
                 .allowsHitTesting(false)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: isBlack ? 8 : 10)
+                    .fill(KidTheme.userInput.opacity(isPressed ? (isBlack ? 0.14 : 0.18) : 0))
+                    .allowsHitTesting(false)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: isBlack ? 8 : 10)
+                    .stroke(KidTheme.userInput.opacity(isPressed ? 0.90 : 0), lineWidth: isPressed ? 2 : 0)
+                    .allowsHitTesting(false)
             )
             .gesture(
                 DragGesture(minimumDistance: 0)
