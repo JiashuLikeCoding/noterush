@@ -128,7 +128,7 @@ struct SongModeView: View {
 
                                 NamingModePicker(namingMode: $namingMode)
 
-                                if let onChangeClef {
+                                if recordMode != .levels, let onChangeClef {
                                     PracticeClefPicker(
                                         selectedMode: staffClefMode,
                                         onSelect: { mode in
