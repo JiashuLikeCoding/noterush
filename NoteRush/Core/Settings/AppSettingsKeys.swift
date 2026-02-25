@@ -8,6 +8,8 @@ enum AppSettingsKeys {
     static let appTheme = "appTheme"
     static let staffClefMode = "staffClefMode"
     static let showNoteName = "showNoteName"
+    // New: show the correct note name after a wrong answer.
+    static let showWrongNoteName = "showWrongNoteName"
     static let showJudgementNoteName = "showJudgementNoteName"
     static let freePracticeClefMode = "freePracticeClefMode"
     static let useColoredKeys = "useColoredKeys"

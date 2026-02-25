@@ -20,6 +20,7 @@ struct SongModeView: View {
     @State private var showSettings: Bool = false
     @AppStorage(AppSettingsKeys.staffClefMode) private var staffClefModeRaw: String = StaffClefMode.treble.rawValue
     @AppStorage(AppSettingsKeys.showNoteName) private var showNoteName: Bool = false
+    @AppStorage(AppSettingsKeys.showWrongNoteName) private var showWrongNoteName: Bool = true
     // Feedback note-name display removed per product direction.
     private let showJudgementNoteName: Bool = false
     @AppStorage(AppSettingsKeys.useColoredKeys) private var useColoredKeys: Bool = true
@@ -149,22 +150,46 @@ struct SongModeView: View {
                     )
 
                     JellyCard {
-                        ScrollingStaffView(
-                            events: viewModel.events,
-                            currentTime: viewModel.currentTime,
-                            scrollConfig: viewModel.scrollConfig,
-                            noteScale: noteScale,
-                            scrollSpeedMultiplier: viewModel.scrollSpeedMultiplier,
-                            lastJudgement: viewModel.lastJudgement,
-                            lastJudgementTime: viewModel.lastJudgementTime,
-                            lastJudgementLetter: viewModel.lastJudgementLetter,
-                            clefMode: staffClefMode,
-                            showNoteName: showNoteName,
-                            showJudgementNoteName: showJudgementNoteName,
-                            useColoredNotes: useColoredNotes,
-                            displayRhythmMode: displayRhythmMode,
-                            namingMode: namingMode
-                        )
+                        ZStack(alignment: .bottom) {
+                            ScrollingStaffView(
+                                events: viewModel.events,
+                                currentTime: viewModel.currentTime,
+                                scrollConfig: viewModel.scrollConfig,
+                                noteScale: noteScale,
+                                scrollSpeedMultiplier: viewModel.scrollSpeedMultiplier,
+                                lastJudgement: viewModel.lastJudgement,
+                                lastJudgementTime: viewModel.lastJudgementTime,
+                                lastJudgementLetter: viewModel.lastJudgementLetter,
+                                clefMode: staffClefMode,
+                                showNoteName: showNoteName,
+                                showJudgementNoteName: showJudgementNoteName,
+                                useColoredNotes: useColoredNotes,
+                                displayRhythmMode: displayRhythmMode,
+                                namingMode: namingMode
+                            )
+
+                            // After a wrong answer, show the correct note name briefly.
+                            if showWrongNoteName,
+                               viewModel.lastJudgement == .miss,
+                               let letter = viewModel.lastJudgementLetter {
+                                let age = viewModel.currentTime - viewModel.lastJudgementTime
+                                if age >= 0 && age <= 1.2 {
+                                    Text("正确答案：\(letter.displayName(for: namingMode))")
+                                        .font(.system(size: 14, weight: .heavy, design: .rounded))
+                                        .foregroundColor(Color.white)
+                                        .padding(.vertical, 10)
+                                        .padding(.horizontal, 14)
+                                        .background(
+                                            Capsule().fill(Color.red.opacity(0.88))
+                                        )
+                                        .overlay(
+                                            Capsule().stroke(Color.white.opacity(0.25), lineWidth: 1)
+                                        )
+                                        .padding(.bottom, 10)
+                                        .transition(.opacity)
+                                }
+                            }
+                        }
                         .frame(maxWidth: .infinity, minHeight: staffHeight, maxHeight: staffHeight)
                         .layoutPriority(1)
                         .padding(.horizontal, 6)

@@ -52,6 +52,7 @@ struct SelectionView: View {
     @AppStorage(AppSettingsKeys.appTheme) private var appThemeRaw: String = AppTheme.zen.rawValue
     @AppStorage(AppSettingsKeys.staffClefMode) private var staffClefModeRaw: String = StaffClefMode.treble.rawValue
     @AppStorage(AppSettingsKeys.showNoteName) private var showNoteName: Bool = false
+    @AppStorage(AppSettingsKeys.showWrongNoteName) private var showWrongNoteName: Bool = true
     // Feedback note-name display removed per product direction.
     private let showJudgementNoteName: Bool = false
     @AppStorage(AppSettingsKeys.freePracticeClefMode) private var freePracticeClefModeRaw: String = StaffClefMode.treble.rawValue
@@ -91,6 +92,7 @@ struct SelectionView: View {
                             soundEnabled: $soundEnabled,
                             appLanguageRaw: $appLanguageRaw,
                             showNoteName: $showNoteName,
+                            showWrongNoteName: $showWrongNoteName,
                             // showJudgementNoteName removed
                             useColoredKeys: $useColoredKeys,
                             useColoredNotes: $useColoredNotes,
@@ -767,6 +769,7 @@ struct AppSettingsCard: View {
     @Binding var soundEnabled: Bool
     @Binding var appLanguageRaw: String
     @Binding var showNoteName: Bool
+    @Binding var showWrongNoteName: Bool
     // showJudgementNoteName removed
     @Binding var useColoredKeys: Bool
     @Binding var useColoredNotes: Bool
@@ -786,6 +789,9 @@ struct AppSettingsCard: View {
                 .tint(accent)
 
             Toggle("Show Note Name", isOn: $showNoteName)
+                .tint(accent)
+
+            Toggle("错误显示音名", isOn: $showWrongNoteName)
                 .tint(accent)
 
             // "Show Feedback Note Name" removed
