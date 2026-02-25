@@ -133,18 +133,34 @@ private struct RecordsModePage: View {
                     StatChip(title: "平均正确率", value: "\(Int((avgAccuracy * 100).rounded()))%")
                 }
 
+                // Check-in as its own card
+                JellyCard {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("打卡")
+                            .font(.system(size: 14, weight: .heavy, design: .rounded))
+                            .foregroundColor(KidTheme.textOnCardPrimary)
+
+                        switch scope {
+                        case .day:
+                            CheckInTodayRow()
+                        case .week:
+                            CheckInWeekPager()
+                                // Force re-init when switching into this scope so the pager jumps back to the current week.
+                                .id("week-\(mode.rawValue)-\(scope.rawValue)")
+                        case .month:
+                            CheckInMonthPager()
+                                // Force re-init when switching into this scope so the pager jumps back to the current month.
+                                .id("month-\(mode.rawValue)-\(scope.rawValue)")
+                        }
+                    }
+                }
+
                 switch scope {
                 case .day:
-                    CheckInTodayRow()
+                    EmptyView()
                 case .week:
-                    CheckInWeekPager()
-                        // Force re-init when switching into this scope so the pager jumps back to the current week.
-                        .id("week-\(mode.rawValue)-\(scope.rawValue)")
                     WeeklyAccuracyChart(mode: mode)
                 case .month:
-                    CheckInMonthPager()
-                        // Force re-init when switching into this scope so the pager jumps back to the current month.
-                        .id("month-\(mode.rawValue)-\(scope.rawValue)")
                     MonthlyAccuracyChart(mode: mode)
                 }
             }
