@@ -114,9 +114,15 @@ private struct RecordsModePage: View {
             let today = store.stats(mode: mode, date: Date())
             let streak = store.streakDays(mode: mode)
 
-            let avgAccuracy = today.accuracy
-            let bestAccuracy = store.lastNDays(mode: mode, n: 91)
-                .map { $0.1 }
+            // Accuracy metrics
+            let modeDays = store.days[mode.rawValue] ?? [:]
+            let allStats = Array(modeDays.values)
+
+            let totalAnswered = allStats.reduce(0) { $0 + $1.answered }
+            let totalCorrect = allStats.reduce(0) { $0 + $1.correct }
+            let avgAccuracy = totalAnswered > 0 ? (Double(totalCorrect) / Double(totalAnswered)) : 0
+
+            let bestAccuracy = allStats
                 .filter { $0.answered > 0 }
                 .map { $0.accuracy }
                 .max() ?? 0
