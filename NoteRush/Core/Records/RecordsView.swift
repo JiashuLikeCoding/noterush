@@ -138,9 +138,13 @@ private struct RecordsModePage: View {
                     CheckInTodayRow()
                 case .week:
                     CheckInWeekPager()
+                        // Force re-init when switching into this scope so the pager jumps back to the current week.
+                        .id("week-\(mode.rawValue)-\(scope.rawValue)")
                     WeeklyAccuracyChart(mode: mode)
                 case .month:
                     CheckInMonthPager()
+                        // Force re-init when switching into this scope so the pager jumps back to the current month.
+                        .id("month-\(mode.rawValue)-\(scope.rawValue)")
                     MonthlyAccuracyChart(mode: mode)
                 }
             }
@@ -390,7 +394,8 @@ private struct CheckInMonthPage: View {
 }
 
 private struct CheckInMonthPager: View {
-    @State private var index: Int = 0
+    // Default to the newest page (current month).
+    @State private var index: Int = 11
 
     private var monthStarts: [Date] {
         let cal = Calendar.current
@@ -420,6 +425,10 @@ private struct CheckInMonthPager: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .frame(height: 210)
+            .onAppear {
+                // Always jump back to the newest month when entering the Monthly scope.
+                index = max(0, starts.count - 1)
+            }
         }
     }
 }
@@ -481,7 +490,8 @@ private struct CheckInWeekPage: View {
 }
 
 private struct CheckInWeekPager: View {
-    @State private var index: Int = 0
+    // Default to the newest page (current week).
+    @State private var index: Int = 11
 
     private var weekStarts: [Date] {
         let cal = Calendar.current
@@ -515,6 +525,10 @@ private struct CheckInWeekPager: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .frame(height: 120)
+            .onAppear {
+                // Always jump back to the newest week when entering the Weekly scope.
+                index = max(0, starts.count - 1)
+            }
         }
     }
 }
