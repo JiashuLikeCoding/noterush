@@ -405,7 +405,7 @@ private struct CheckInMonthPager: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 240)
+            .frame(height: 210)
         }
     }
 }
@@ -488,7 +488,7 @@ private struct CheckInWeekPager: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 170)
+            .frame(height: 160)
         }
     }
 }
@@ -668,7 +668,7 @@ private struct WeeklyAccuracyChart: View {
                 }
             }
             .chartYScale(domain: 0...1)
-            .frame(height: 140)
+            .frame(height: 120)
             .padding(.vertical, 6)
         }
     }
@@ -725,7 +725,7 @@ private struct MonthlyAccuracyChart: View {
                 }
             }
             .chartYScale(domain: 0...1)
-            .frame(height: 140)
+            .frame(height: 120)
             .padding(.vertical, 6)
         }
     }
