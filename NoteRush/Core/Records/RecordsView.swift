@@ -116,14 +116,21 @@ private struct RecordsModePage: View {
                 let streak = store.streakDays(mode: mode)
 
                 // Accuracy metrics
-                let modeDays = store.days[mode.rawValue] ?? [:]
-                let allStats = Array(modeDays.values)
+                // - 日视图：按“每天”统计
+                // - 月视图：按“每月汇总”统计（每个月一个点）
+                let modeDaysDict = store.days[mode.rawValue] ?? [:]
+                let dayStats = Array(modeDaysDict.values)
 
-                let totalAnswered = allStats.reduce(0) { $0 + $1.answered }
-                let totalCorrect = allStats.reduce(0) { $0 + $1.correct }
+                let monthStats: [RecordsDayStats] = store.months(mode: mode, count: 36)
+                    .map { $0.1 }
+
+                let sourceStats = (scope == .day) ? dayStats : monthStats
+
+                let totalAnswered = sourceStats.reduce(0) { $0 + $1.answered }
+                let totalCorrect = sourceStats.reduce(0) { $0 + $1.correct }
                 let avgAccuracy = totalAnswered > 0 ? (Double(totalCorrect) / Double(totalAnswered)) : 0
 
-                let bestAccuracy = allStats
+                let bestAccuracy = sourceStats
                     .filter { $0.answered > 0 }
                     .map { $0.accuracy }
                     .max() ?? 0
