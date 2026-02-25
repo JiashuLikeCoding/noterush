@@ -276,16 +276,31 @@ private struct SelectionLobby: View {
                     // Global naming mode (CDE vs Do Re Mi). Applies to all 4 modes before starting.
                     NamingModeQuickToggle(namingMode: $namingMode)
 
-                    // 4 mode pills (order: 闯关 → 听音 → 歌曲 → 自由练习)
-                    HomePillButton(title: "闯关", subtitle: "挑战关卡，拿星星", colors: [KidTheme.success, KidTheme.success.opacity(0.7)], systemImage: "flag.checkered", action: onPickLevel)
+                    // Mode pills should evenly split the remaining space.
+                    GeometryReader { geo in
+                        let count: CGFloat = 5
+                        let spacing: CGFloat = 14
+                        let available = max(0, geo.size.height)
+                        let buttonHeight = max(54, (available - spacing * (count - 1)) / count)
 
-                    HomePillButton(title: "听音训练", subtitle: "听声音猜音符", colors: [KidTheme.primary, KidTheme.primary.opacity(0.7)], systemImage: "ear", action: onPickListen)
+                        VStack(spacing: spacing) {
+                            HomePillButton(title: "闯关", subtitle: "挑战关卡，拿星星", colors: [KidTheme.success, KidTheme.success.opacity(0.7)], systemImage: "flag.checkered", action: onPickLevel)
+                                .frame(height: buttonHeight)
 
-                    HomePillButton(title: "歌曲", subtitle: "练熟悉的旋律", colors: [KidTheme.accent, KidTheme.accent.opacity(0.7)], systemImage: "music.note.list", action: onPickSong)
+                            HomePillButton(title: "听音训练", subtitle: "听声音猜音符", colors: [KidTheme.primary, KidTheme.primary.opacity(0.7)], systemImage: "ear", action: onPickListen)
+                                .frame(height: buttonHeight)
 
-                    HomePillButton(title: "自由练习", subtitle: "认识五线谱上的音符", colors: [Color(red: 1.00, green: 0.62, blue: 0.80), Color(red: 0.55, green: 0.84, blue: 1.00)], systemImage: "eyes", action: onPickPractice)
+                            HomePillButton(title: "歌曲", subtitle: "练熟悉的旋律", colors: [KidTheme.accent, KidTheme.accent.opacity(0.7)], systemImage: "music.note.list", action: onPickSong)
+                                .frame(height: buttonHeight)
 
-                    HomePillButton(title: "记录", subtitle: "查看练习统计", colors: [Color(red: 0.55, green: 0.76, blue: 1.00), Color(red: 0.35, green: 0.60, blue: 1.00)], systemImage: "chart.bar.xaxis", action: onPickRecords)
+                            HomePillButton(title: "自由练习", subtitle: "认识五线谱上的音符", colors: [Color(red: 1.00, green: 0.62, blue: 0.80), Color(red: 0.55, green: 0.84, blue: 1.00)], systemImage: "eyes", action: onPickPractice)
+                                .frame(height: buttonHeight)
+
+                            HomePillButton(title: "记录", subtitle: "查看练习统计", colors: [Color(red: 0.55, green: 0.76, blue: 1.00), Color(red: 0.35, green: 0.60, blue: 1.00)], systemImage: "chart.bar.xaxis", action: onPickRecords)
+                                .frame(height: buttonHeight)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    }
 
                     Spacer(minLength: 4)
                 }
