@@ -201,10 +201,10 @@ private struct StatChip: View {
 }
 
 private enum CheckInRule {
-    static let secondsThreshold = 15 * 60
-
+    /// Check-in rule: completing at least one item counts as a check-in.
     static func checkedIn(_ stats: RecordsDayStats) -> Bool {
-        stats.seconds >= secondsThreshold
+        // Prefer answered count; fall back to time in case a mode logs seconds without answers.
+        (stats.answered > 0) || (stats.seconds > 0)
     }
 }
 
@@ -231,7 +231,7 @@ private struct CheckInLegendRow: View {
 
             Spacer()
 
-            Text("打卡：≥15分钟")
+            Text("打卡：完成1次")
                 .font(.system(size: 12, weight: .heavy, design: .rounded))
                 .foregroundColor(KidTheme.textOnCardSecondary)
         }
