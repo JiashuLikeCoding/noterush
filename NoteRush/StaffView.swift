@@ -679,6 +679,7 @@ final class SongViewModel: ObservableObject {
     @Published private(set) var levelGoalTotal: Int = 0
     @Published private(set) var levelGoalCompleted: Int = 0
     private var levelInitialNoteCount: Int = 0
+    private var levelUsesFixedSequence: Bool = false
 
     var scrollConfig: ScrollConfig { ScrollConfig() }
     /// Scrolling speed multiplier.
@@ -717,6 +718,9 @@ final class SongViewModel: ObservableObject {
 
         if recordMode == .levels {
             // LEVEL: each staff note (incl. octave/position) must be answered N times.
+            // Requirement: each note must appear EXACTLY N times (no more, no less).
+            levelUsesFixedSequence = true
+
             levelActivePool = song.generationPool.filter { song.spawnLetters.contains($0.letter) }
             levelInitialNoteCount = levelActivePool.count
             levelGoalTotal = levelInitialNoteCount * requiredCorrectPerNote
@@ -724,6 +728,18 @@ final class SongViewModel: ObservableObject {
             for n in levelActivePool {
                 levelCounts[n.id] = 0
             }
+
+            // Build a fixed sequence where each note appears exactly N times.
+            // Shuffle so the practice feels varied.
+            var fixedNotes: [StaffNote] = []
+            fixedNotes.reserveCapacity(levelInitialNoteCount * requiredCorrectPerNote)
+            for n in levelActivePool {
+                for _ in 0..<requiredCorrectPerNote {
+                    fixedNotes.append(n)
+                }
+            }
+            fixedNotes.shuffle()
+            self.song.notes = fixedNotes
         }
 
         rebuildEvents()
@@ -844,7 +860,9 @@ final class SongViewModel: ObservableObject {
         soundAnchorSwitchTime = currentTime + anchorDelay
 
         if recordMode == .levels {
-            refreshUpcomingEventsReplacingCompleted()
+            if !levelUsesFixedSequence {
+                refreshUpcomingEventsReplacingCompleted()
+            }
             if levelActivePool.isEmpty {
                 endSession()
                 return
@@ -904,7 +922,9 @@ final class SongViewModel: ObservableObject {
         }
 
         if recordMode == .levels {
-            refreshUpcomingEventsReplacingCompleted()
+            if !levelUsesFixedSequence {
+                refreshUpcomingEventsReplacingCompleted()
+            }
             if levelActivePool.isEmpty {
                 endSession()
                 return
@@ -924,7 +944,10 @@ final class SongViewModel: ObservableObject {
         }
 
         if recordMode == .levels {
-            refreshUpcomingEventsReplacingCompleted()
+            // If using fixed sequence, do not mutate upcoming events.
+            if !levelUsesFixedSequence {
+                refreshUpcomingEventsReplacingCompleted()
+            }
         }
     }
 
