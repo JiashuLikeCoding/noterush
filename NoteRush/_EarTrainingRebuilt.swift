@@ -460,25 +460,7 @@ struct EarTrainingSelectionCard: View {
     var body: some View {
         JellyCard {
             VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("LISTEN")
-                            .font(.system(size: 18, weight: .heavy, design: .rounded))
-                            .foregroundColor(KidTheme.textOnCardPrimary)
-                        Text("听音训练")
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
-                            .foregroundColor(KidTheme.textOnCardSecondary)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "ear")
-                        .font(.system(size: 16, weight: .heavy))
-                        .foregroundColor(KidTheme.primary)
-                        .padding(10)
-                        .background(KidTheme.primary.opacity(0.12))
-                        .cornerRadius(14)
-                }
+                // Section title removed per design direction (keep cards minimal)
 
                 VStack(spacing: 12) {
                     ForEach(EarTrainingLevel.library) { level in
@@ -686,15 +668,6 @@ struct EarTrainingView: View {
     private var progressKidCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("PROGRESS")
-                        .font(.system(size: KidTheme.FontSize.caption, weight: .heavy, design: .rounded))
-                        .foregroundColor(KidTheme.textPrimary)
-                    Text("完成进度")
-                        .font(.system(size: KidTheme.FontSize.tiny, weight: .semibold, design: .rounded))
-                        .foregroundColor(KidTheme.textSecondary)
-                }
-
                 Spacer()
 
                 Text("\(viewModel.progressPointsEarned)/\(viewModel.progressTotalPoints)")

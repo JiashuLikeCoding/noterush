@@ -25,35 +25,9 @@ struct RecordsView: View {
         VStack(alignment: .leading, spacing: 10) {
             JellyCard(tint: KidTheme.primary) {
                 VStack(alignment: .leading, spacing: 10) {
-                    HStack(alignment: .center, spacing: 12) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(KidTheme.primary.opacity(0.18))
-                                .frame(width: 48, height: 48)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                                )
+                    // Title header removed per design direction (keep the card clean)
 
-                            Image(systemName: "chart.bar.xaxis")
-                                .font(.system(size: 22, weight: .heavy))
-                                .foregroundColor(Color.white.opacity(0.95))
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("RECORDS")
-                                .font(.system(size: 14, weight: .heavy, design: .rounded))
-                                .foregroundColor(KidTheme.textOnCardSecondary)
-
-                            Text("记录")
-                                .font(.system(size: 24, weight: .heavy, design: .rounded))
-                                .foregroundColor(KidTheme.textOnCardPrimary)
-                        }
-
-                        Spacer()
-                    }
-
-                    ModePicker(mode: $mode)
+                ModePicker(mode: $mode)
 
                     TabView(selection: $mode) {
                         ForEach(TrainingModeRecord.allCases) { m in

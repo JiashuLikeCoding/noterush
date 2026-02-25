@@ -965,25 +965,7 @@ struct LevelSelectionCard: View {
     var body: some View {
         JellyCard {
             VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("LEVEL")
-                            .font(.system(size: 18, weight: .heavy, design: .rounded))
-                            .foregroundColor(KidTheme.textOnCardPrimary)
-                        Text("闯关")
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
-                            .foregroundColor(KidTheme.textOnCardSecondary)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "flag.checkered")
-                        .font(.system(size: 16, weight: .heavy))
-                        .foregroundColor(KidTheme.success)
-                        .padding(10)
-                        .background(KidTheme.success.opacity(0.12))
-                        .cornerRadius(14)
-                }
+                // Section title removed per design direction (keep cards minimal)
 
                 VStack(spacing: 12) {
                     ForEach(PracticeLevel.library) { level in
@@ -1093,25 +1075,7 @@ struct SongSelectionCard: View {
     var body: some View {
         JellyCard {
             VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("SONG")
-                            .font(.system(size: 18, weight: .heavy, design: .rounded))
-                            .foregroundColor(KidTheme.textOnCardPrimary)
-                        Text("歌曲")
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
-                            .foregroundColor(KidTheme.textOnCardSecondary)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "music.note.list")
-                        .font(.system(size: 16, weight: .heavy))
-                        .foregroundColor(KidTheme.primary)
-                        .padding(10)
-                        .background(KidTheme.primary.opacity(0.12))
-                        .cornerRadius(14)
-                }
+                // Section title removed per design direction (keep cards minimal)
 
                 let grouped = Dictionary(grouping: SongTemplate.library, by: \.level)
                 let levels = grouped.keys.sorted()
@@ -1294,33 +1258,9 @@ private struct RecordsCard: View {
     var body: some View {
         JellyCard(tint: KidTheme.primary) {
             VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .center, spacing: 12) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(KidTheme.primary.opacity(0.18))
-                            .frame(width: 56, height: 56)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                            )
-
-                        Image(systemName: "chart.bar.xaxis")
-                            .font(.system(size: 22, weight: .heavy))
-                            .foregroundColor(Color.white.opacity(0.95))
-                    }
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("RECORDS")
-                            .font(.system(size: 14, weight: .heavy, design: .rounded))
-                            .foregroundColor(KidTheme.textOnCardSecondary)
-
-                        Text("记录")
-                            .font(.system(size: 26, weight: .heavy, design: .rounded))
-                            .foregroundColor(KidTheme.textOnCardPrimary)
-                    }
-
+                // Section title removed per design direction (keep cards minimal)
+                HStack {
                     Spacer()
-
                     Text("\(accuracyPercent)%")
                         .font(.system(size: 22, weight: .heavy, design: .rounded))
                         .foregroundColor(KidTheme.textOnCardPrimary)
