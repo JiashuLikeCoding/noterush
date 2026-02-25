@@ -142,8 +142,10 @@ struct RootView: View {
                     activeClefMode = levelClefMode
                     activeSongTemplate = nil
                     activeSongTargetLetters = selectedLetters
-                    isFreePractice = selectedLevel == nil
-                    selectionTab = isFreePractice ? .practiceNotes : .levels
+                    // Both free practice and LEVEL mode are endless practice sessions (not SONG training).
+                    // Use selectedLevel to decide the record mode / return tab.
+                    isFreePractice = true
+                    selectionTab = selectedLevel == nil ? .practiceNotes : .levels
                     step = .play
                 },
                 onStartSong: { song, targetLetters, clefMode in
