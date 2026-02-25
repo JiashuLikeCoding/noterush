@@ -62,6 +62,8 @@ struct RecordsView: View {
                         }
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
+                    // Page-style TabView needs an explicit height in a VStack; otherwise it may collapse to 0.
+                    .frame(height: scope == .day ? 520 : 360)
                     .frame(maxWidth: .infinity)
                     .clipped()
                 }
@@ -189,9 +191,9 @@ private struct HeatmapGrid: View {
         // Use answered as intensity driver.
         let a = stats.answered
         if a <= 0 { return 0 }
-        if a <= 3 { return 0.35 }
-        if a <= 8 { return 0.60 }
-        if a <= 15 { return 0.82 }
+        if a <= 3 { return 0.25 }
+        if a <= 8 { return 0.50 }
+        if a <= 15 { return 0.75 }
         return 1.0
     }
 
@@ -214,11 +216,12 @@ private struct HeatmapGrid: View {
             LazyVGrid(columns: columns, spacing: 6) {
                 ForEach(0..<91, id: \.self) { i in
                     let item = i < padded.count ? padded[i] : (nil, RecordsDayStats())
+                    let t = intensity(item.1)
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.white.opacity(0.08 + 0.22 * intensity(item.1)))
+                        .fill(t <= 0 ? Color.black.opacity(0.04) : KidTheme.primary.opacity(0.18 + 0.62 * t))
                         .overlay(
                             RoundedRectangle(cornerRadius: 4)
-                                .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                                .stroke(t <= 0 ? Color.white.opacity(0.10) : KidTheme.primary.opacity(0.55), lineWidth: 1)
                         )
                         .frame(height: 12)
                 }
