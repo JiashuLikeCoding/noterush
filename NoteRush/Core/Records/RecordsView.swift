@@ -134,9 +134,11 @@ private struct RecordsModePage: View {
             }
 
             if scope == .day {
-                HeatmapGrid(mode: mode, days: store.lastNDays(mode: mode, n: 91))
+                CheckInTodayRow()
+                CheckInHeatmap3Months()
                 DailyCharts(mode: mode)
             } else {
+                CheckInMonthGrid()
                 MonthlyCharts(mode: mode)
             }
         }
@@ -195,43 +197,208 @@ private struct StatChip: View {
     }
 }
 
-private struct HeatmapGrid: View {
-    let mode: TrainingModeRecord
-    let days: [(Date, RecordsDayStats)]
+private enum CheckInRule {
+    static let secondsThreshold = 15 * 60
 
-    // “打卡”规则：每天训练超过 15 分钟（>= 900s）就算打卡一次。
-    private func checkedIn(_ stats: RecordsDayStats) -> Bool {
-        stats.seconds >= 15 * 60
+    static func checkedIn(_ stats: RecordsDayStats) -> Bool {
+        stats.seconds >= secondsThreshold
+    }
+}
+
+private struct CheckInLegendRow: View {
+    var body: some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 6) {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(KidTheme.primary.opacity(0.85))
+                    .frame(width: 14, height: 10)
+                Text("闯关")
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundColor(KidTheme.textOnCardSecondary)
+            }
+
+            HStack(spacing: 6) {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(KidTheme.accent.opacity(0.85))
+                    .frame(width: 14, height: 10)
+                Text("听音")
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundColor(KidTheme.textOnCardSecondary)
+            }
+
+            Spacer()
+
+            Text("打卡：≥15分钟")
+                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .foregroundColor(KidTheme.textOnCardSecondary)
+        }
+    }
+}
+
+private struct CheckInTodayRow: View {
+    @StateObject private var store = RecordsStore.shared
+
+    private func pill(title: String, ok: Bool, color: Color) -> some View {
+        HStack(spacing: 8) {
+            RoundedRectangle(cornerRadius: 3)
+                .fill(color.opacity(0.85))
+                .frame(width: 14, height: 10)
+            Text(title)
+                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .foregroundColor(KidTheme.textOnCardPrimary)
+            Spacer()
+            Text(ok ? "已打卡" : "未打卡")
+                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .foregroundColor(ok ? KidTheme.textOnCardPrimary : KidTheme.textOnCardSecondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(ok ? color.opacity(0.18) : Color.black.opacity(0.04))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(ok ? color.opacity(0.70) : KidTheme.border, lineWidth: 1)
+                )
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .background(Color.white.opacity(0.10))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
     }
 
     var body: some View {
+        let todayLevels = store.stats(mode: .levels, date: Date())
+        let todayListen = store.stats(mode: .listen, date: Date())
+        let okLevels = CheckInRule.checkedIn(todayLevels)
+        let okListen = CheckInRule.checkedIn(todayListen)
+
+        VStack(alignment: .leading, spacing: 10) {
+            Text("今日打卡")
+                .font(.system(size: 14, weight: .heavy, design: .rounded))
+                .foregroundColor(KidTheme.textOnCardPrimary)
+
+            HStack(spacing: 12) {
+                pill(title: "闯关", ok: okLevels, color: KidTheme.primary)
+                pill(title: "听音", ok: okListen, color: KidTheme.accent)
+            }
+        }
+        .padding(.top, 2)
+    }
+}
+
+private struct CheckInDayCell: View {
+    let levelsOK: Bool
+    let listenOK: Bool
+
+    var body: some View {
+        HStack(spacing: 2) {
+            RoundedRectangle(cornerRadius: 3)
+                .fill(levelsOK ? KidTheme.primary.opacity(0.85) : Color.black.opacity(0.04))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3)
+                        .stroke(levelsOK ? KidTheme.primary.opacity(0.95) : Color.white.opacity(0.10), lineWidth: 1)
+                )
+            RoundedRectangle(cornerRadius: 3)
+                .fill(listenOK ? KidTheme.accent.opacity(0.85) : Color.black.opacity(0.04))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3)
+                        .stroke(listenOK ? KidTheme.accent.opacity(0.95) : Color.white.opacity(0.10), lineWidth: 1)
+                )
+        }
+        .frame(height: 12)
+    }
+}
+
+private struct CheckInHeatmap3Months: View {
+    @StateObject private var store = RecordsStore.shared
+
+    var body: some View {
+        let days = store.lastNDays(mode: .levels, n: 91) // use dates only
         let cal = Calendar.current
         let start = days.first?.0 ?? Date()
         let startWeekday = cal.component(.weekday, from: start) // 1..7 (Sun..Sat)
         let padLeading = (startWeekday + 5) % 7 // convert so Monday=0
 
-        let padded: [(Date?, RecordsDayStats)] = Array(repeating: (nil, RecordsDayStats()), count: padLeading)
-            + days.map { ($0.0 as Date?, $0.1) }
-
+        let paddedDates: [Date?] = Array(repeating: nil, count: padLeading) + days.map { $0.0 }
         let columns = Array(repeating: GridItem(.flexible(minimum: 6, maximum: 20), spacing: 6), count: 13)
 
         VStack(alignment: .leading, spacing: 10) {
-            Text("最近 3 个月（打卡）")
-                .font(.system(size: 14, weight: .heavy, design: .rounded))
-                .foregroundColor(KidTheme.textOnCardPrimary)
+            HStack(spacing: 10) {
+                Text("最近 3 个月（打卡）")
+                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .foregroundColor(KidTheme.textOnCardPrimary)
+
+                Spacer(minLength: 8)
+
+                CheckInLegendRow()
+            }
 
             LazyVGrid(columns: columns, spacing: 6) {
                 ForEach(0..<91, id: \.self) { i in
-                    let item = i < padded.count ? padded[i] : (nil, RecordsDayStats())
-                    let ok = checkedIn(item.1)
+                    let d = i < paddedDates.count ? paddedDates[i] : nil
+                    let sLevels = d.map { store.stats(mode: .levels, date: $0) } ?? RecordsDayStats()
+                    let sListen = d.map { store.stats(mode: .listen, date: $0) } ?? RecordsDayStats()
 
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(ok ? KidTheme.accent.opacity(0.72) : Color.black.opacity(0.04))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 4)
-                                .stroke(ok ? KidTheme.accent.opacity(0.90) : Color.white.opacity(0.10), lineWidth: 1)
-                        )
-                        .frame(height: 12)
+                    CheckInDayCell(
+                        levelsOK: CheckInRule.checkedIn(sLevels),
+                        listenOK: CheckInRule.checkedIn(sListen)
+                    )
+                }
+            }
+        }
+        .padding(.top, 4)
+    }
+}
+
+private struct CheckInMonthGrid: View {
+    @StateObject private var store = RecordsStore.shared
+
+    var body: some View {
+        let cal = Calendar.current
+        let now = Date()
+        let comps = cal.dateComponents([.year, .month], from: now)
+        let monthStart = cal.date(from: comps) ?? cal.startOfDay(for: now)
+        let range = cal.range(of: .day, in: .month, for: monthStart) ?? 1..<2
+
+        let firstWeekday = cal.component(.weekday, from: monthStart) // 1..7
+        let padLeading = (firstWeekday + 5) % 7 // Monday=0
+
+        let dates: [Date?] = {
+            var arr: [Date?] = Array(repeating: nil, count: padLeading)
+            for day in range {
+                var dc = cal.dateComponents([.year, .month, .day], from: monthStart)
+                dc.day = day
+                arr.append(cal.date(from: dc))
+            }
+            return arr
+        }()
+
+        let columns = Array(repeating: GridItem(.flexible(minimum: 8, maximum: 24), spacing: 6), count: 7)
+
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("本月打卡")
+                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .foregroundColor(KidTheme.textOnCardPrimary)
+                Spacer(minLength: 8)
+                CheckInLegendRow()
+            }
+
+            LazyVGrid(columns: columns, spacing: 6) {
+                ForEach(0..<dates.count, id: \.self) { i in
+                    let d = dates[i]
+                    let sLevels = d.map { store.stats(mode: .levels, date: $0) } ?? RecordsDayStats()
+                    let sListen = d.map { store.stats(mode: .listen, date: $0) } ?? RecordsDayStats()
+
+                    CheckInDayCell(
+                        levelsOK: CheckInRule.checkedIn(sLevels),
+                        listenOK: CheckInRule.checkedIn(sListen)
+                    )
+                    .frame(height: 14)
+                    .opacity(d == nil ? 0.0 : 1.0)
                 }
             }
         }
