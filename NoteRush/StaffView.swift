@@ -363,7 +363,7 @@ struct ScrollConfig {
 struct SongNoteEvent: Identifiable {
     let id: UUID
     let time: TimeInterval
-    let note: StaffNote
+    var note: StaffNote
     let isTarget: Bool
     var judgement: Judgement?
 
@@ -452,6 +452,10 @@ struct Song: Identifiable {
     var clefMode: StaffClefMode
     var notes: [StaffNote]
 
+    // Generation context (used for adaptive/endless modes like LEVEL training)
+    var spawnLetters: Set<NoteLetter> = []
+    var generationPool: [StaffNote] = []
+
     var rhythmLabel: String { rhythm.displayName }
 
     static func generate(
@@ -483,7 +487,17 @@ struct Song: Identifiable {
             out.append(candidates.isEmpty ? pool[i % pool.count] : candidates[Int.random(in: 0..<candidates.count)])
         }
 
-        return Song(title: title, bpm: bpm, timeSignature: timeSignature, rhythm: rhythm, duration: duration, clefMode: clefMode, notes: out)
+        return Song(
+            title: title,
+            bpm: bpm,
+            timeSignature: timeSignature,
+            rhythm: rhythm,
+            duration: duration,
+            clefMode: clefMode,
+            notes: out,
+            spawnLetters: spawnLetters,
+            generationPool: pool
+        )
     }
 
     static func generateFixed(
@@ -499,7 +513,17 @@ struct Song: Identifiable {
             pool.first(where: { $0.midiNoteNumber == m.midi }) ?? pool.first(where: { $0.letter == m.letter }) ?? pool.first
         }
         let duration = max(8, Double(melody.count))
-        return Song(title: title, bpm: bpm, timeSignature: timeSignature, rhythm: .quarter, duration: duration, clefMode: clefMode, notes: notes)
+        return Song(
+            title: title,
+            bpm: bpm,
+            timeSignature: timeSignature,
+            rhythm: .quarter,
+            duration: duration,
+            clefMode: clefMode,
+            notes: notes,
+            spawnLetters: targetLetters,
+            generationPool: pool
+        )
     }
 
     static func generateEndless(
@@ -519,7 +543,17 @@ struct Song: Identifiable {
         let notes = (0..<64).map { i in
             candidates.isEmpty ? pool[i % pool.count] : candidates[Int.random(in: 0..<candidates.count)]
         }
-        return Song(title: title, bpm: bpm, timeSignature: timeSignature, rhythm: rhythm, duration: 9999, clefMode: clefMode, notes: notes)
+        return Song(
+            title: title,
+            bpm: bpm,
+            timeSignature: timeSignature,
+            rhythm: rhythm,
+            duration: 9999,
+            clefMode: clefMode,
+            notes: notes,
+            spawnLetters: spawnLetters,
+            generationPool: pool
+        )
     }
 }
 
@@ -633,6 +667,11 @@ final class SongViewModel: ObservableObject {
 
     private let recordMode: TrainingModeRecord
 
+    // LEVEL mode: per-staff-note goal (octave-specific)
+    private let requiredCorrectPerNote: Int = 3
+    private var levelCounts: [String: Int] = [:] // StaffNote.id -> progress (0..3)
+    private var levelActivePool: [StaffNote] = []
+
     var scrollConfig: ScrollConfig { ScrollConfig() }
     /// Scrolling speed multiplier.
     /// Requirement: changing BPM should both speed up the scroll AND make notes closer together.
@@ -667,6 +706,15 @@ final class SongViewModel: ObservableObject {
         self.song = song
         self.recordMode = recordMode
         self.bpm = song.bpm
+
+        if recordMode == .levels {
+            // LEVEL: each staff note (incl. octave/position) must be correct 3 times.
+            levelActivePool = song.generationPool.filter { song.spawnLetters.contains($0.letter) }
+            for n in levelActivePool {
+                levelCounts[n.id] = 0
+            }
+        }
+
         rebuildEvents()
         resetClockForScrollStart()
         soundAnchorNote = currentTargetNote
@@ -772,12 +820,25 @@ final class SongViewModel: ObservableObject {
         // Records
         RecordsStore.shared.logAnswer(mode: recordMode, correct: correct)
 
+        // LEVEL progress: octave-specific StaffNote target.
+        if recordMode == .levels {
+            applyLevelProgress(for: targetEvent.note, correct: correct)
+        }
+
         // Advance regardless (the note at the line has been judged).
         currentIndex += 1
 
         // Do NOT change octave immediately on correct/miss; wait until the judgement window ends.
         pendingSoundAnchorNote = currentTargetNote
         soundAnchorSwitchTime = currentTime + anchorDelay
+
+        if recordMode == .levels {
+            refreshUpcomingEventsReplacingCompleted()
+            if levelActivePool.isEmpty {
+                endSession()
+                return
+            }
+        }
 
         if currentIndex >= events.count {
             endSession()
@@ -814,6 +875,11 @@ final class SongViewModel: ObservableObject {
                 // Records
                 RecordsStore.shared.logAnswer(mode: recordMode, correct: false)
 
+                // LEVEL: wrong subtracts 1 (clamped) for the target note.
+                if recordMode == .levels {
+                    applyLevelProgress(for: e.note, correct: false)
+                }
+
                 lastJudgement = .miss
                 lastJudgementLetter = e.note.letter
                 lastJudgementTime = currentTime
@@ -824,6 +890,14 @@ final class SongViewModel: ObservableObject {
                 continue
             }
             break
+        }
+
+        if recordMode == .levels {
+            refreshUpcomingEventsReplacingCompleted()
+            if levelActivePool.isEmpty {
+                endSession()
+                return
+            }
         }
 
         if currentIndex >= events.count {
@@ -837,8 +911,51 @@ final class SongViewModel: ObservableObject {
         events = song.notes.enumerated().map { idx, note in
             SongNoteEvent(time: TimeInterval(idx) * noteInterval, note: note, isTarget: true)
         }
+
+        if recordMode == .levels {
+            refreshUpcomingEventsReplacingCompleted()
+        }
+    }
+
+    // MARK: - LEVEL adaptive goal logic
+
+    private func applyLevelProgress(for note: StaffNote, correct: Bool) {
+        guard recordMode == .levels else { return }
+
+        let id = note.id
+        let cur = levelCounts[id] ?? 0
+        if correct {
+            let next = min(requiredCorrectPerNote, cur + 1)
+            levelCounts[id] = next
+            if next >= requiredCorrectPerNote {
+                // Remove from active pool so it won't appear again.
+                levelActivePool.removeAll(where: { $0.id == id })
+            }
+        } else {
+            // Wrong subtracts 1 (clamped).
+            let next = max(0, cur - 1)
+            levelCounts[id] = next
+        }
+    }
+
+    private func refreshUpcomingEventsReplacingCompleted() {
+        guard recordMode == .levels else { return }
+        guard !levelActivePool.isEmpty else { return }
+
+        func isCompleted(_ note: StaffNote) -> Bool {
+            (levelCounts[note.id] ?? 0) >= requiredCorrectPerNote
+        }
+
+        for i in currentIndex..<events.count {
+            if isCompleted(events[i].note) {
+                if let replacement = levelActivePool.randomElement() {
+                    events[i].note = replacement
+                }
+            }
+        }
     }
 }
+
 
 // MARK: - Utility effects / placeholders
 
