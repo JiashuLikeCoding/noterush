@@ -115,6 +115,11 @@ struct SongModeView: View {
                         // Top controls (glass card)
                         JellyCard {
                             VStack(spacing: 10) {
+                                // LEVEL completion progress
+                                if recordMode == .levels {
+                                    LevelGoalProgressView(viewModel: viewModel)
+                                }
+
                                 BpmControlView(bpm: $bpmDraft, onCommit: { value in
                                     viewModel.restart(withBpm: value)
                                 })
@@ -403,6 +408,57 @@ struct SongHeaderView: View {
                 .tint(CuteTheme.accent)
         }
         // No inner card here. The parent ControlCard already provides the container.
+    }
+}
+
+private struct LevelGoalProgressView: View {
+    @ObservedObject var viewModel: SongViewModel
+
+    private var fraction: Double {
+        let total = max(1, viewModel.levelGoalTotal)
+        return Double(viewModel.levelGoalCompleted) / Double(total)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("完成进度")
+                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .foregroundColor(KidTheme.textOnCardPrimary)
+
+                Spacer()
+
+                Text("\(viewModel.levelGoalCompleted)/\(max(0, viewModel.levelGoalTotal))")
+                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .foregroundColor(KidTheme.textOnCardSecondary)
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.black.opacity(0.06))
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(
+                            LinearGradient(
+                                colors: [KidTheme.accent.opacity(0.95), KidTheme.primary.opacity(0.85)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: max(10, proxy.size.width * fraction))
+                }
+            }
+            .frame(height: 12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(KidTheme.border, lineWidth: 1)
+            )
+
+            Text("规则：每个音（包含八度）答对 3 次；答错 -1；满 3 次后不再出现")
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundColor(KidTheme.textOnCardSecondary)
+        }
+        .padding(.bottom, 2)
     }
 }
 
