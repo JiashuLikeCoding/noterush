@@ -722,32 +722,7 @@ final class SongViewModel: ObservableObject {
         self.bpm = song.bpm
 
         if recordMode == .levels {
-            // LEVEL: each staff note (incl. octave/position) must be answered N times.
-            // Requirement: each note must appear EXACTLY N times (no more, no less).
-            levelUsesFixedSequence = true
-
-            levelActivePool = song.generationPool.filter { song.spawnLetters.contains($0.letter) }
-            levelInitialNoteCount = levelActivePool.count
-            levelGoalTotal = levelInitialNoteCount * requiredCorrectPerNote
-            levelGoalCompleted = 0
-            for n in levelActivePool {
-                levelNoteById[n.id] = n
-                levelCounts[n.id] = 0
-                levelAttemptCounts[n.id] = 0
-                levelWrongCounts[n.id] = 0
-            }
-
-            // Build a fixed sequence where each note appears exactly N times.
-            // Shuffle so the practice feels varied.
-            var fixedNotes: [StaffNote] = []
-            fixedNotes.reserveCapacity(levelInitialNoteCount * requiredCorrectPerNote)
-            for n in levelActivePool {
-                for _ in 0..<requiredCorrectPerNote {
-                    fixedNotes.append(n)
-                }
-            }
-            fixedNotes.shuffle()
-            self.song.notes = fixedNotes
+            resetLevelState()
         }
 
         rebuildEvents()
@@ -805,6 +780,11 @@ final class SongViewModel: ObservableObject {
     func restart(withBpm newBpm: Double) {
         bpm = newBpm
         song.bpm = newBpm
+
+        if recordMode == .levels {
+            resetLevelState()
+        }
+
         resetClockForScrollStart()
         currentIndex = 0
         lastJudgement = nil
@@ -957,6 +937,41 @@ final class SongViewModel: ObservableObject {
                 refreshUpcomingEventsReplacingCompleted()
             }
         }
+    }
+
+    private func resetLevelState() {
+        // LEVEL: each staff note (incl. octave/position) must be answered N times.
+        // Requirement: each note must appear EXACTLY N times (no more, no less).
+        levelUsesFixedSequence = true
+
+        levelActivePool = song.generationPool.filter { song.spawnLetters.contains($0.letter) }
+        levelInitialNoteCount = levelActivePool.count
+        levelGoalTotal = levelInitialNoteCount * requiredCorrectPerNote
+        levelGoalCompleted = 0
+
+        levelCounts.removeAll(keepingCapacity: true)
+        levelAttemptCounts.removeAll(keepingCapacity: true)
+        levelWrongCounts.removeAll(keepingCapacity: true)
+        levelNoteById.removeAll(keepingCapacity: true)
+
+        for n in levelActivePool {
+            levelNoteById[n.id] = n
+            levelCounts[n.id] = 0
+            levelAttemptCounts[n.id] = 0
+            levelWrongCounts[n.id] = 0
+        }
+
+        // Build a fixed sequence where each note appears exactly N times.
+        // Shuffle so the practice feels varied.
+        var fixedNotes: [StaffNote] = []
+        fixedNotes.reserveCapacity(levelInitialNoteCount * requiredCorrectPerNote)
+        for n in levelActivePool {
+            for _ in 0..<requiredCorrectPerNote {
+                fixedNotes.append(n)
+            }
+        }
+        fixedNotes.shuffle()
+        song.notes = fixedNotes
     }
 
     // MARK: - LEVEL adaptive goal logic
