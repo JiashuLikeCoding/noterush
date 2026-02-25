@@ -63,7 +63,7 @@ struct RecordsView: View {
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
                     // Page-style TabView needs an explicit height in a VStack; otherwise it may collapse to 0.
-                    .frame(height: scope == .day ? 560 : 400)
+                    .frame(height: scope == .day ? 380 : 420)
                     .frame(maxWidth: .infinity)
                 }
             }
@@ -135,11 +135,8 @@ private struct RecordsModePage: View {
 
             if scope == .day {
                 CheckInTodayRow()
-                CheckInHeatmap3Months()
-                DailyCharts(mode: mode)
             } else {
-                CheckInMonthGrid()
-                MonthlyCharts(mode: mode)
+                CheckInMonthPager()
             }
         }
         .padding(.bottom, 2)
@@ -312,55 +309,19 @@ private struct CheckInDayCell: View {
     }
 }
 
-private struct CheckInHeatmap3Months: View {
+private struct CheckInMonthPage: View {
+    let monthStart: Date
     @StateObject private var store = RecordsStore.shared
 
-    var body: some View {
-        let days = store.lastNDays(mode: .levels, n: 91) // use dates only
+    private func title(for monthStart: Date) -> String {
         let cal = Calendar.current
-        let start = days.first?.0 ?? Date()
-        let startWeekday = cal.component(.weekday, from: start) // 1..7 (Sun..Sat)
-        let padLeading = (startWeekday + 5) % 7 // convert so Monday=0
-
-        let paddedDates: [Date?] = Array(repeating: nil, count: padLeading) + days.map { $0.0 }
-        let columns = Array(repeating: GridItem(.flexible(minimum: 6, maximum: 20), spacing: 6), count: 13)
-
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                Text("最近 3 个月（打卡）")
-                    .font(.system(size: 14, weight: .heavy, design: .rounded))
-                    .foregroundColor(KidTheme.textOnCardPrimary)
-
-                Spacer(minLength: 8)
-
-                CheckInLegendRow()
-            }
-
-            LazyVGrid(columns: columns, spacing: 6) {
-                ForEach(0..<91, id: \.self) { i in
-                    let d = i < paddedDates.count ? paddedDates[i] : nil
-                    let sLevels = d.map { store.stats(mode: .levels, date: $0) } ?? RecordsDayStats()
-                    let sListen = d.map { store.stats(mode: .listen, date: $0) } ?? RecordsDayStats()
-
-                    CheckInDayCell(
-                        levelsOK: CheckInRule.checkedIn(sLevels),
-                        listenOK: CheckInRule.checkedIn(sListen)
-                    )
-                }
-            }
-        }
-        .padding(.top, 4)
+        let y = cal.component(.year, from: monthStart)
+        let m = cal.component(.month, from: monthStart)
+        return String(format: "%04d-%02d", y, m)
     }
-}
-
-private struct CheckInMonthGrid: View {
-    @StateObject private var store = RecordsStore.shared
 
     var body: some View {
         let cal = Calendar.current
-        let now = Date()
-        let comps = cal.dateComponents([.year, .month], from: now)
-        let monthStart = cal.date(from: comps) ?? cal.startOfDay(for: now)
         let range = cal.range(of: .day, in: .month, for: monthStart) ?? 1..<2
 
         let firstWeekday = cal.component(.weekday, from: monthStart) // 1..7
@@ -380,10 +341,12 @@ private struct CheckInMonthGrid: View {
 
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("本月打卡")
+                Text(title(for: monthStart))
                     .font(.system(size: 14, weight: .heavy, design: .rounded))
                     .foregroundColor(KidTheme.textOnCardPrimary)
+
                 Spacer(minLength: 8)
+
                 CheckInLegendRow()
             }
 
@@ -403,6 +366,41 @@ private struct CheckInMonthGrid: View {
             }
         }
         .padding(.top, 4)
+    }
+}
+
+private struct CheckInMonthPager: View {
+    @State private var index: Int = 0
+
+    private var monthStarts: [Date] {
+        let cal = Calendar.current
+        let now = Date()
+        let comps = cal.dateComponents([.year, .month], from: now)
+        let thisMonthStart = cal.date(from: comps) ?? cal.startOfDay(for: now)
+        // 12 months, oldest -> newest
+        return (0..<12).compactMap { i in
+            cal.date(byAdding: .month, value: -(11 - i), to: thisMonthStart)
+        }
+    }
+
+    var body: some View {
+        let starts = monthStarts
+        let safeIndex = min(max(0, index), max(0, starts.count - 1))
+
+        VStack(alignment: .leading, spacing: 10) {
+            TabView(selection: Binding(
+                get: { safeIndex },
+                set: { index = $0 }
+            )) {
+                ForEach(Array(starts.enumerated()), id: \.offset) { i, start in
+                    CheckInMonthPage(monthStart: start)
+                        .tag(i)
+                        .padding(.top, 2)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: 250)
+        }
     }
 }
 
