@@ -343,7 +343,7 @@ private struct CheckInMonthPage: View {
             return arr
         }()
 
-        let columns = Array(repeating: GridItem(.flexible(minimum: 8, maximum: 22), spacing: 4), count: 7)
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
 
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -356,18 +356,18 @@ private struct CheckInMonthPage: View {
                 CheckInLegendRow()
             }
 
-            // Weekday labels
-            HStack(spacing: 0) {
+            // Weekday labels (use the same grid columns so the labels align with the check-in cells)
+            LazyVGrid(columns: columns, spacing: 4) {
                 let labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
                 ForEach(0..<labels.count, id: \.self) { i in
                     Text(labels[i])
                         .font(.system(size: 11, weight: .heavy, design: .rounded))
                         .foregroundColor(KidTheme.textOnCardSecondary)
-                        .frame(maxWidth: .infinity)
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
 
-            LazyVGrid(columns: columns, spacing: 3) {
+            LazyVGrid(columns: columns, spacing: 4) {
                 ForEach(0..<dates.count, id: \.self) { i in
                     let d = dates[i]
                     let sLevels = d.map { store.stats(mode: .levels, date: $0) } ?? RecordsDayStats()
@@ -436,7 +436,7 @@ private struct CheckInWeekPage: View {
     var body: some View {
         let cal = Calendar.current
         let days: [Date] = (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: weekStart) }
-        let columns = Array(repeating: GridItem(.flexible(minimum: 10, maximum: 26), spacing: 4), count: 7)
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
 
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -447,18 +447,18 @@ private struct CheckInWeekPage: View {
                 CheckInLegendRow()
             }
 
-            // Weekday labels
-            HStack(spacing: 0) {
+            // Weekday labels (use the same grid columns so the labels align with the check-in cells)
+            LazyVGrid(columns: columns, spacing: 4) {
                 let labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
                 ForEach(0..<labels.count, id: \.self) { i in
                     Text(labels[i])
                         .font(.system(size: 11, weight: .heavy, design: .rounded))
                         .foregroundColor(KidTheme.textOnCardSecondary)
-                        .frame(maxWidth: .infinity)
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
 
-            LazyVGrid(columns: columns, spacing: 3) {
+            LazyVGrid(columns: columns, spacing: 4) {
                 ForEach(0..<days.count, id: \.self) { i in
                     let d = days[i]
                     let sLevels = store.stats(mode: .levels, date: d)
