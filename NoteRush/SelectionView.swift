@@ -279,9 +279,9 @@ private struct SelectionLobby: View {
                     // Mode pills should evenly split the remaining space.
                     GeometryReader { geo in
                         let count: CGFloat = 5
-                        let spacing: CGFloat = 14
+                        let spacing: CGFloat = 10
                         let available = max(0, geo.size.height)
-                        let buttonHeight = max(54, (available - spacing * (count - 1)) / count)
+                        let buttonHeight = max(60, (available - spacing * (count - 1)) / count)
 
                         VStack(spacing: spacing) {
                             HomePillButton(title: "闯关", subtitle: "挑战关卡，拿星星", colors: [KidTheme.success, KidTheme.success.opacity(0.7)], systemImage: "flag.checkered", action: onPickLevel)
