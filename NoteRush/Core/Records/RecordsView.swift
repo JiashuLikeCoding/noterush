@@ -8,12 +8,14 @@ struct RecordsView: View {
 
     enum Scope: String, CaseIterable, Identifiable {
         case day
+        case week
         case month
         var id: String { rawValue }
 
         var title: String {
             switch self {
             case .day: return "每天"
+            case .week: return "每周"
             case .month: return "每月"
             }
         }
@@ -117,14 +119,24 @@ private struct RecordsModePage: View {
 
                 // Accuracy metrics
                 // - 日视图：按“每天”统计
+                // - 周视图：按“每周汇总”统计（每周一个点）
                 // - 月视图：按“每月汇总”统计（每个月一个点）
                 let modeDaysDict = store.days[mode.rawValue] ?? [:]
                 let dayStats = Array(modeDaysDict.values)
 
+                let weekStats: [RecordsDayStats] = store.weeks(mode: mode, count: 24)
+                    .map { $0.1 }
+
                 let monthStats: [RecordsDayStats] = store.months(mode: mode, count: 36)
                     .map { $0.1 }
 
-                let sourceStats = (scope == .day) ? dayStats : monthStats
+                let sourceStats: [RecordsDayStats] = {
+                    switch scope {
+                    case .day: return dayStats
+                    case .week: return weekStats
+                    case .month: return monthStats
+                    }
+                }()
 
                 let totalAnswered = sourceStats.reduce(0) { $0 + $1.answered }
                 let totalCorrect = sourceStats.reduce(0) { $0 + $1.correct }
@@ -147,9 +159,12 @@ private struct RecordsModePage: View {
                     StatChip(title: "平均正确率", value: "\(Int((avgAccuracy * 100).rounded()))%")
                 }
 
-                if scope == .day {
+                switch scope {
+                case .day:
                     CheckInTodayRow()
-                } else {
+                case .week:
+                    CheckInWeekPager()
+                case .month:
                     CheckInMonthPager()
                 }
             }
@@ -416,6 +431,89 @@ private struct CheckInMonthPager: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .frame(height: 320)
+        }
+    }
+}
+
+private struct CheckInWeekPage: View {
+    let weekStart: Date
+    @StateObject private var store = RecordsStore.shared
+
+    private func title(for weekStart: Date) -> String {
+        let cal = Calendar.current
+        let y = cal.component(.year, from: weekStart)
+        let m = cal.component(.month, from: weekStart)
+        let d = cal.component(.day, from: weekStart)
+        return String(format: "%04d-%02d-%02d", y, m, d)
+    }
+
+    var body: some View {
+        let cal = Calendar.current
+        let days: [Date] = (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: weekStart) }
+        let columns = Array(repeating: GridItem(.flexible(minimum: 10, maximum: 30), spacing: 6), count: 7)
+
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("周：\(title(for: weekStart))")
+                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .foregroundColor(KidTheme.textOnCardPrimary)
+                Spacer(minLength: 8)
+                CheckInLegendRow()
+            }
+
+            LazyVGrid(columns: columns, spacing: 6) {
+                ForEach(0..<days.count, id: \.self) { i in
+                    let d = days[i]
+                    let sLevels = store.stats(mode: .levels, date: d)
+                    let sListen = store.stats(mode: .listen, date: d)
+
+                    CheckInDayCell(
+                        levelsOK: CheckInRule.checkedIn(sLevels),
+                        listenOK: CheckInRule.checkedIn(sListen)
+                    )
+                    .frame(height: 14)
+                }
+            }
+        }
+        .padding(.top, 4)
+    }
+}
+
+private struct CheckInWeekPager: View {
+    @State private var index: Int = 0
+
+    private var weekStarts: [Date] {
+        let cal = Calendar.current
+        let now = Date()
+        // Start of current week
+        let startOfToday = cal.startOfDay(for: now)
+        let weekday = cal.component(.weekday, from: startOfToday)
+        let daysFromWeekStart = (weekday - cal.firstWeekday + 7) % 7
+        let thisWeekStart = cal.date(byAdding: .day, value: -daysFromWeekStart, to: startOfToday) ?? startOfToday
+
+        // 12 weeks, oldest -> newest
+        return (0..<12).compactMap { i in
+            cal.date(byAdding: .day, value: -7 * (11 - i), to: thisWeekStart)
+        }
+    }
+
+    var body: some View {
+        let starts = weekStarts
+        let safeIndex = min(max(0, index), max(0, starts.count - 1))
+
+        VStack(alignment: .leading, spacing: 10) {
+            TabView(selection: Binding(
+                get: { safeIndex },
+                set: { index = $0 }
+            )) {
+                ForEach(Array(starts.enumerated()), id: \.offset) { i, start in
+                    CheckInWeekPage(weekStart: start)
+                        .tag(i)
+                        .padding(.top, 2)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: 180)
         }
     }
 }

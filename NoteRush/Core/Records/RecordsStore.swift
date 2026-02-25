@@ -138,6 +138,29 @@ final class RecordsStore: ObservableObject {
         }.reversed()
     }
 
+    func weeks(mode: TrainingModeRecord, count: Int = 12, endingAt date: Date = Date()) -> [(Date, RecordsDayStats)] {
+        let cal = Calendar.current
+        // Start of current week (use the user's locale firstWeekday)
+        let startOfToday = cal.startOfDay(for: date)
+        let weekday = cal.component(.weekday, from: startOfToday)
+        let daysFromWeekStart = (weekday - cal.firstWeekday + 7) % 7
+        let thisWeekStart = cal.date(byAdding: .day, value: -daysFromWeekStart, to: startOfToday) ?? startOfToday
+
+        return (0..<count).compactMap { i in
+            guard let start = cal.date(byAdding: .day, value: -(7 * i), to: thisWeekStart) else { return nil }
+            var agg = RecordsDayStats()
+            for dayOffset in 0..<7 {
+                if let d = cal.date(byAdding: .day, value: dayOffset, to: start) {
+                    let s = stats(mode: mode, date: d)
+                    agg.answered += s.answered
+                    agg.correct += s.correct
+                    agg.seconds += s.seconds
+                }
+            }
+            return (start, agg)
+        }.reversed()
+    }
+
     // MARK: - Persistence
 
     private func load() {
