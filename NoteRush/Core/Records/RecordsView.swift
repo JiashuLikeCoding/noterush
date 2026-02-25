@@ -113,6 +113,7 @@ private struct RecordsModePage: View {
             ScopePicker(scope: $scope)
 
             let today = store.stats(mode: mode, date: Date())
+            let streak = store.streakDays(mode: mode)
 
             let avgAccuracy = today.accuracy
             let bestAccuracy = store.lastNDays(mode: mode, n: 91)
@@ -121,8 +122,14 @@ private struct RecordsModePage: View {
                 .map { $0.accuracy }
                 .max() ?? 0
 
-            HStack(spacing: 12) {
-                StatChip(title: "答题次数", value: "\(today.answered)")
+            let statColumns: [GridItem] = [
+                GridItem(.flexible(minimum: 120), spacing: 12),
+                GridItem(.flexible(minimum: 120), spacing: 12)
+            ]
+
+            LazyVGrid(columns: statColumns, spacing: 12) {
+                StatChip(title: "测试音符", value: "\(today.answered)")
+                StatChip(title: "连续天数", value: "\(streak)")
                 StatChip(title: "最好正确率", value: "\(Int((bestAccuracy * 100).rounded()))%")
                 StatChip(title: "平均正确率", value: "\(Int((avgAccuracy * 100).rounded()))%")
             }
