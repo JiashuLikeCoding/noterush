@@ -356,7 +356,18 @@ private struct CheckInMonthPage: View {
                 CheckInLegendRow()
             }
 
-            LazyVGrid(columns: columns, spacing: 4) {
+            // Weekday labels
+            HStack(spacing: 0) {
+                let labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+                ForEach(0..<labels.count, id: \.self) { i in
+                    Text(labels[i])
+                        .font(.system(size: 11, weight: .heavy, design: .rounded))
+                        .foregroundColor(KidTheme.textOnCardSecondary)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+
+            LazyVGrid(columns: columns, spacing: 3) {
                 ForEach(0..<dates.count, id: \.self) { i in
                     let d = dates[i]
                     let sLevels = d.map { store.stats(mode: .levels, date: $0) } ?? RecordsDayStats()
@@ -437,7 +448,7 @@ private struct CheckInWeekPage: View {
             }
 
             // Weekday labels
-            LazyVGrid(columns: columns, spacing: 4) {
+            HStack(spacing: 0) {
                 let labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
                 ForEach(0..<labels.count, id: \.self) { i in
                     Text(labels[i])
@@ -447,7 +458,7 @@ private struct CheckInWeekPage: View {
                 }
             }
 
-            LazyVGrid(columns: columns, spacing: 4) {
+            LazyVGrid(columns: columns, spacing: 3) {
                 ForEach(0..<days.count, id: \.self) { i in
                     let d = days[i]
                     let sLevels = store.stats(mode: .levels, date: d)
@@ -499,7 +510,7 @@ private struct CheckInWeekPager: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 160)
+            .frame(height: 120)
         }
     }
 }
