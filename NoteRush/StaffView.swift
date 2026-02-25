@@ -671,8 +671,12 @@ final class SongViewModel: ObservableObject {
     private let requiredCorrectPerNote: Int = 3
     @Published private(set) var levelCounts: [String: Int] = [:] // StaffNote.id -> progress (0..3)
     @Published private(set) var levelActivePool: [StaffNote] = []
+
+    /// LEVEL progress is tracked as "steps": each unique staff note must be correct N times.
+    /// So total = uniqueNotes * requiredCorrectPerNote, completed = sum(perNoteProgress).
     @Published private(set) var levelGoalTotal: Int = 0
     @Published private(set) var levelGoalCompleted: Int = 0
+    private var levelInitialNoteCount: Int = 0
 
     var scrollConfig: ScrollConfig { ScrollConfig() }
     /// Scrolling speed multiplier.
@@ -712,7 +716,8 @@ final class SongViewModel: ObservableObject {
         if recordMode == .levels {
             // LEVEL: each staff note (incl. octave/position) must be correct 3 times.
             levelActivePool = song.generationPool.filter { song.spawnLetters.contains($0.letter) }
-            levelGoalTotal = levelActivePool.count
+            levelInitialNoteCount = levelActivePool.count
+            levelGoalTotal = levelInitialNoteCount * requiredCorrectPerNote
             levelGoalCompleted = 0
             for n in levelActivePool {
                 levelCounts[n.id] = 0
@@ -934,13 +939,17 @@ final class SongViewModel: ObservableObject {
             if next >= requiredCorrectPerNote {
                 // Remove from active pool so it won't appear again.
                 levelActivePool.removeAll(where: { $0.id == id })
-                levelGoalCompleted = min(levelGoalTotal, levelGoalCompleted + 1)
             }
         } else {
             // Wrong subtracts 1 (clamped).
             let next = max(0, cur - 1)
             levelCounts[id] = next
         }
+
+        // Completed = sum of per-note progress, Total = unique notes * requiredCorrectPerNote.
+        // Keep these published values in sync for the UI progress display.
+        levelGoalTotal = levelInitialNoteCount * requiredCorrectPerNote
+        levelGoalCompleted = min(levelGoalTotal, levelCounts.values.reduce(0, +))
     }
 
     private func refreshUpcomingEventsReplacingCompleted() {
@@ -951,8 +960,9 @@ final class SongViewModel: ObservableObject {
             (levelCounts[note.id] ?? 0) >= requiredCorrectPerNote
         }
 
-        // Keep published completion in sync even if pool changed elsewhere.
-        levelGoalCompleted = levelGoalTotal - levelActivePool.count
+        // Keep published completion in sync ("steps" based).
+        levelGoalTotal = levelInitialNoteCount * requiredCorrectPerNote
+        levelGoalCompleted = min(levelGoalTotal, levelCounts.values.reduce(0, +))
 
         for i in currentIndex..<events.count {
             if isCompleted(events[i].note) {
