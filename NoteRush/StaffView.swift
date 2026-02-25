@@ -668,11 +668,13 @@ final class SongViewModel: ObservableObject {
     private let recordMode: TrainingModeRecord
 
     // LEVEL mode: per-staff-note goal (octave-specific)
-    private let requiredCorrectPerNote: Int = 3
+    // Product direction: each note appears a fixed number of times; progress increases even on wrong.
+    private let requiredCorrectPerNote: Int = 2
     @Published private(set) var levelCounts: [String: Int] = [:] // StaffNote.id -> progress (0..3)
     @Published private(set) var levelActivePool: [StaffNote] = []
 
-    /// LEVEL progress is tracked as "steps": each unique staff note must be correct N times.
+    /// LEVEL progress is tracked as "steps": each unique staff note must be answered N times.
+    /// Progress increases even on wrong.
     /// So total = uniqueNotes * requiredCorrectPerNote, completed = sum(perNoteProgress).
     @Published private(set) var levelGoalTotal: Int = 0
     @Published private(set) var levelGoalCompleted: Int = 0
@@ -714,7 +716,7 @@ final class SongViewModel: ObservableObject {
         self.bpm = song.bpm
 
         if recordMode == .levels {
-            // LEVEL: each staff note (incl. octave/position) must be correct 3 times.
+            // LEVEL: each staff note (incl. octave/position) must be answered N times.
             levelActivePool = song.generationPool.filter { song.spawnLetters.contains($0.letter) }
             levelInitialNoteCount = levelActivePool.count
             levelGoalTotal = levelInitialNoteCount * requiredCorrectPerNote
@@ -931,25 +933,24 @@ final class SongViewModel: ObservableObject {
     private func applyLevelProgress(for note: StaffNote, correct: Bool) {
         guard recordMode == .levels else { return }
 
+        // Product direction: wrong answers still advance progress.
         let id = note.id
         let cur = levelCounts[id] ?? 0
-        if correct {
-            let next = min(requiredCorrectPerNote, cur + 1)
-            levelCounts[id] = next
-            if next >= requiredCorrectPerNote {
-                // Remove from active pool so it won't appear again.
-                levelActivePool.removeAll(where: { $0.id == id })
-            }
-        } else {
-            // Wrong subtracts 1 (clamped).
-            let next = max(0, cur - 1)
-            levelCounts[id] = next
+        let next = min(requiredCorrectPerNote, cur + 1)
+        levelCounts[id] = next
+
+        if next >= requiredCorrectPerNote {
+            // Remove from active pool so it won't appear again.
+            levelActivePool.removeAll(where: { $0.id == id })
         }
 
         // Completed = sum of per-note progress, Total = unique notes * requiredCorrectPerNote.
         // Keep these published values in sync for the UI progress display.
         levelGoalTotal = levelInitialNoteCount * requiredCorrectPerNote
         levelGoalCompleted = min(levelGoalTotal, levelCounts.values.reduce(0, +))
+
+        // Note: `correct` is still used for accuracy (judgements/Records), even though progress advances either way.
+        _ = correct
     }
 
     private func refreshUpcomingEventsReplacingCompleted() {
