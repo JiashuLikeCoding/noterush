@@ -22,14 +22,14 @@ struct RecordsView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             JellyCard(tint: KidTheme.primary) {
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 10) {
                     HStack(alignment: .center, spacing: 12) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(KidTheme.primary.opacity(0.18))
-                                .frame(width: 56, height: 56)
+                                .frame(width: 48, height: 48)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 16)
                                         .stroke(Color.white.opacity(0.18), lineWidth: 1)
@@ -46,7 +46,7 @@ struct RecordsView: View {
                                 .foregroundColor(KidTheme.textOnCardSecondary)
 
                             Text("记录")
-                                .font(.system(size: 26, weight: .heavy, design: .rounded))
+                                .font(.system(size: 24, weight: .heavy, design: .rounded))
                                 .foregroundColor(KidTheme.textOnCardPrimary)
                         }
 
@@ -59,14 +59,14 @@ struct RecordsView: View {
                         ForEach(TrainingModeRecord.allCases) { m in
                             RecordsModePage(mode: m, scope: $scope)
                                 .tag(m)
-                                .padding(.top, 10)
+                                .padding(.top, 6)
                                 .padding(.horizontal, 1)
                         }
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
                     // Page-style TabView needs an explicit height in a VStack; otherwise it may collapse to 0.
                     // Make it tall enough that Weekly/Monthly views can show their chart without being cut off.
-                    .frame(height: 720)
+                    .frame(height: 600)
                     .frame(maxWidth: .infinity)
                 }
             }
@@ -90,7 +90,7 @@ private struct ModePicker: View {
                     Text(m.titleZH)
                         .font(.system(size: 14, weight: .heavy, design: .rounded))
                         .foregroundColor(isSelected ? KidTheme.textOnCardPrimary : KidTheme.textOnCardSecondary)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
                         .background(isSelected ? KidTheme.primary.opacity(0.18) : Color.black.opacity(0.04))
                         .cornerRadius(14)
@@ -111,8 +111,7 @@ private struct RecordsModePage: View {
     @StateObject private var store = RecordsStore.shared
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
                 ScopePicker(scope: $scope)
 
                 let today = store.stats(mode: mode, date: Date())
@@ -149,11 +148,11 @@ private struct RecordsModePage: View {
                     .max() ?? 0
 
                 let statColumns: [GridItem] = [
-                    GridItem(.flexible(minimum: 120), spacing: 12),
-                    GridItem(.flexible(minimum: 120), spacing: 12)
+                    GridItem(.flexible(minimum: 120), spacing: 10),
+                    GridItem(.flexible(minimum: 120), spacing: 10)
                 ]
 
-                LazyVGrid(columns: statColumns, spacing: 12) {
+                LazyVGrid(columns: statColumns, spacing: 10) {
                     StatChip(title: "测试音符", value: "\(today.answered)")
                     StatChip(title: "连续天数", value: "\(streak)")
                     StatChip(title: "最好正确率", value: "\(Int((bestAccuracy * 100).rounded()))%")
@@ -171,9 +170,7 @@ private struct RecordsModePage: View {
                     MonthlyAccuracyChart(mode: mode)
                 }
             }
-            .padding(.bottom, 10)
-        }
-        .scrollIndicators(.hidden)
+            .padding(.bottom, 8)
     }
 }
 
@@ -188,7 +185,7 @@ private struct ScopePicker: View {
                     Text(s.title)
                         .font(.system(size: 13, weight: .heavy, design: .rounded))
                         .foregroundColor(isSelected ? KidTheme.textOnCardPrimary : KidTheme.textOnCardSecondary)
-                        .padding(.vertical, 8)
+                        .padding(.vertical, 7)
                         .frame(maxWidth: .infinity)
                         .background(isSelected ? KidTheme.accent.opacity(0.16) : Color.black.opacity(0.04))
                         .cornerRadius(14)
@@ -213,11 +210,11 @@ private struct StatChip: View {
                 .font(.system(size: 12, weight: .heavy, design: .rounded))
                 .foregroundColor(KidTheme.textOnCardSecondary)
             Text(value)
-                .font(.system(size: 18, weight: .heavy, design: .rounded))
+                .font(.system(size: 16, weight: .heavy, design: .rounded))
                 .foregroundColor(KidTheme.textOnCardPrimary)
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.white.opacity(0.10))
         .cornerRadius(16)
@@ -290,8 +287,8 @@ private struct CheckInTodayRow: View {
                         .stroke(ok ? color.opacity(0.70) : KidTheme.border, lineWidth: 1)
                 )
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
         .background(Color.white.opacity(0.10))
         .cornerRadius(16)
         .overlay(
@@ -339,7 +336,7 @@ private struct CheckInDayCell: View {
                         .stroke(listenOK ? KidTheme.accent.opacity(0.95) : Color.white.opacity(0.10), lineWidth: 1)
                 )
         }
-        .frame(height: 12)
+        .frame(height: 10)
     }
 }
 
@@ -371,12 +368,12 @@ private struct CheckInMonthPage: View {
             return arr
         }()
 
-        let columns = Array(repeating: GridItem(.flexible(minimum: 8, maximum: 24), spacing: 6), count: 7)
+        let columns = Array(repeating: GridItem(.flexible(minimum: 8, maximum: 22), spacing: 4), count: 7)
 
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(title(for: monthStart))
-                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
                     .foregroundColor(KidTheme.textOnCardPrimary)
 
                 Spacer(minLength: 8)
@@ -384,7 +381,7 @@ private struct CheckInMonthPage: View {
                 CheckInLegendRow()
             }
 
-            LazyVGrid(columns: columns, spacing: 6) {
+            LazyVGrid(columns: columns, spacing: 4) {
                 ForEach(0..<dates.count, id: \.self) { i in
                     let d = dates[i]
                     let sLevels = d.map { store.stats(mode: .levels, date: $0) } ?? RecordsDayStats()
@@ -394,7 +391,7 @@ private struct CheckInMonthPage: View {
                         levelsOK: CheckInRule.checkedIn(sLevels),
                         listenOK: CheckInRule.checkedIn(sListen)
                     )
-                    .frame(height: 14)
+                    .frame(height: 12)
                     .opacity(d == nil ? 0.0 : 1.0)
                 }
             }
@@ -433,7 +430,7 @@ private struct CheckInMonthPager: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 300)
+            .frame(height: 240)
         }
     }
 }
@@ -453,18 +450,18 @@ private struct CheckInWeekPage: View {
     var body: some View {
         let cal = Calendar.current
         let days: [Date] = (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: weekStart) }
-        let columns = Array(repeating: GridItem(.flexible(minimum: 10, maximum: 30), spacing: 6), count: 7)
+        let columns = Array(repeating: GridItem(.flexible(minimum: 10, maximum: 26), spacing: 4), count: 7)
 
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("周：\(title(for: weekStart))")
-                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
                     .foregroundColor(KidTheme.textOnCardPrimary)
                 Spacer(minLength: 8)
                 CheckInLegendRow()
             }
 
-            LazyVGrid(columns: columns, spacing: 6) {
+            LazyVGrid(columns: columns, spacing: 4) {
                 ForEach(0..<days.count, id: \.self) { i in
                     let d = days[i]
                     let sLevels = store.stats(mode: .levels, date: d)
@@ -474,7 +471,7 @@ private struct CheckInWeekPage: View {
                         levelsOK: CheckInRule.checkedIn(sLevels),
                         listenOK: CheckInRule.checkedIn(sListen)
                     )
-                    .frame(height: 14)
+                    .frame(height: 12)
                 }
             }
         }
@@ -516,7 +513,7 @@ private struct CheckInWeekPager: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 200)
+            .frame(height: 170)
         }
     }
 }
