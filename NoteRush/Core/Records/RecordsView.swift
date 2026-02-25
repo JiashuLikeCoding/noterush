@@ -57,15 +57,14 @@ struct RecordsView: View {
                         ForEach(TrainingModeRecord.allCases) { m in
                             RecordsModePage(mode: m, scope: $scope)
                                 .tag(m)
-                                .padding(.top, 2)
+                                .padding(.top, 10)
                                 .padding(.horizontal, 1)
                         }
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
                     // Page-style TabView needs an explicit height in a VStack; otherwise it may collapse to 0.
-                    .frame(height: scope == .day ? 520 : 360)
+                    .frame(height: scope == .day ? 560 : 400)
                     .frame(maxWidth: .infinity)
-                    .clipped()
                 }
             }
 
