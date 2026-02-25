@@ -662,9 +662,11 @@ private struct WeeklyAccuracyChart: View {
                 }
             }
             .chartXAxis {
-                AxisMarks { _ in
+                // Reduce label clutter: show one label every ~4 weeks, and use short format.
+                AxisMarks(values: .stride(by: .weekOfYear, count: 4)) { _ in
                     AxisGridLine().foregroundStyle(Color.black.opacity(0.08))
-                    AxisValueLabel().foregroundStyle(KidTheme.textOnCardSecondary)
+                    AxisValueLabel(format: .dateTime.month().day())
+                        .foregroundStyle(KidTheme.textOnCardSecondary)
                 }
             }
             .chartYScale(domain: 0...1)
