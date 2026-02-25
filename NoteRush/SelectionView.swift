@@ -178,24 +178,7 @@ struct SelectionView: View {
             Spacer(minLength: 0)
         }
 
-        // HOME: keep ONLY the settings icon at top-right.
-        if showLobby && !showingSettings {
-            Button(action: { showingSettings = true }) {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(KidTheme.textOnBackgroundPrimary)
-                    .frame(width: 44, height: 44)
-                    .background(Color.white.opacity(0.16))
-                    .cornerRadius(16)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.white.opacity(0.22), lineWidth: 1)
-                    )
-            }
-            .buttonStyle(.plain)
-            .padding(.trailing, 16)
-            .padding(.top, 12)
-        }
+        // HOME: no settings button (requested).
     }
     .kidBackground()
     .onAppear {
