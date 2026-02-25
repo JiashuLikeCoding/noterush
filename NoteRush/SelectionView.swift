@@ -244,7 +244,7 @@ private struct SelectionLobby: View {
                         .font(.system(size: 18, weight: .heavy))
                         .foregroundColor(Color.white.opacity(0.9))
                     Text("音乐小天才")
-                        .font(.system(size: 30, weight: .heavy, design: .rounded))
+                        .font(.system(size: 34, weight: .heavy, design: .rounded))
                         .foregroundColor(Color.white)
                     Text("♪")
                         .font(.system(size: 18, weight: .heavy))
@@ -252,10 +252,10 @@ private struct SelectionLobby: View {
                 }
 
                 Text("让我们一起学习五线谱和音符吧！")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .foregroundColor(Color.white.opacity(0.85))
             }
-            .padding(.top, 14)
+            .padding(.top, 18)
 
             // Big glass card
             ZStack {
@@ -281,7 +281,7 @@ private struct SelectionLobby: View {
                         let count: CGFloat = 5
                         let spacing: CGFloat = 10
                         let available = max(0, geo.size.height)
-                        let buttonHeight = max(60, (available - spacing * (count - 1)) / count)
+                        let buttonHeight = max(52, (available - spacing * (count - 1)) / count)
 
                         VStack(spacing: spacing) {
                             HomePillButton(title: "闯关", subtitle: "挑战关卡，拿星星", colors: [KidTheme.success, KidTheme.success.opacity(0.7)], systemImage: "flag.checkered", action: onPickLevel)
