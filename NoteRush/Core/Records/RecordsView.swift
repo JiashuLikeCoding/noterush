@@ -355,6 +355,7 @@ private struct CheckInMonthPage: View {
 
                 CheckInLegendRow()
             }
+            .frame(maxWidth: .infinity)
 
             // Weekday labels (use the same grid columns so the labels align with the check-in cells)
             LazyVGrid(columns: columns, spacing: 4) {
@@ -366,6 +367,7 @@ private struct CheckInMonthPage: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             LazyVGrid(columns: columns, spacing: 4) {
                 ForEach(0..<dates.count, id: \.self) { i in
@@ -381,6 +383,7 @@ private struct CheckInMonthPage: View {
                     .opacity(d == nil ? 0.0 : 1.0)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.top, 4)
     }
@@ -457,6 +460,7 @@ private struct CheckInWeekPage: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             LazyVGrid(columns: columns, spacing: 4) {
                 ForEach(0..<days.count, id: \.self) { i in
