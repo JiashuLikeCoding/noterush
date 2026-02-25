@@ -42,6 +42,7 @@ struct SongModeView: View {
     private let clefModeOverride: StaffClefMode?
     private let isSongTraining: Bool
     private let recordMode: TrainingModeRecord
+    private let songTitle: String
 
     private var staffClefMode: StaffClefMode {
         if let clefModeOverride {
@@ -69,6 +70,7 @@ struct SongModeView: View {
         self.onChangeClef = onChangeClef
         self.isSongTraining = isSongTraining
         self.recordMode = recordMode
+        self.songTitle = song.title
         self.onExit = onExit
         _bpmDraft = State(initialValue: song.bpm)
     }
@@ -102,7 +104,7 @@ struct SongModeView: View {
                     VStack(spacing: 10) {
                         SongNavigationBar(
                             isPaused: viewModel.isPaused,
-                            title: isSongTraining ? "SONG" : "PRACTICE",
+                            title: recordMode == .levels ? songTitle : (isSongTraining ? "SONG" : "PRACTICE"),
                             onBack: onExit,
                             onTogglePause: {
                                 viewModel.togglePause()
