@@ -13,6 +13,9 @@ enum KidTheme {
     static let primary = Color(red: 0.22, green: 0.62, blue: 0.98) // sky blue
     static let primaryPressed = Color(red: 0.15, green: 0.52, blue: 0.92)
 
+    // Compatibility alias used by some older views
+    static let userInput = primary
+
     static let accent = Color(red: 1.00, green: 0.45, blue: 0.78) // pink
     static let accentPressed = Color(red: 0.92, green: 0.36, blue: 0.70)
 
@@ -29,6 +32,12 @@ enum KidTheme {
     // Text
     static let textPrimary = Color(red: 0.11, green: 0.16, blue: 0.22)
     static let textSecondary = Color.black.opacity(0.55)
+
+    // Compatibility aliases used by some views
+    static let textOnCardPrimary = textPrimary
+    static let textOnCardSecondary = textSecondary
+    static let textOnBackgroundPrimary = textPrimary
+    static let textOnBackgroundSecondary = textSecondary
 
     // MARK: - Layout
 
