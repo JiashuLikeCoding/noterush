@@ -739,9 +739,8 @@ final class SongViewModel: ObservableObject {
 
         // Standard notation spacing model:
         // 1 beat = 1 grid cell, so whole=4 cells, half=2, quarter=1.
-        // Product requirement (sight-reading): user should see at least ~3-4 bars at once.
-        // Keep ~5 bars visible (more in landscape), and never too sparse.
-        let visibleBeats = max(12.0, song.timeSignature.beatsPerBar * 5.0)
+        // Sight-reading: keep the view clean. Show ~4 bars at once (not a wall of barlines).
+        let visibleBeats = max(8.0, song.timeSignature.beatsPerBar * 4.0)
         let secondsPerBeat = 60.0 / max(10.0, bpm)
         config.leadTime = secondsPerBeat * visibleBeats
         return config
