@@ -101,7 +101,8 @@ struct ScrollingStaffView: View {
                         ForEach(startBar...endBar, id: \.self) { barIndex in
                             let barTime = TimeInterval(barIndex) * barDuration
                             let rawX = judgementX + CGFloat(barTime - currentTime) * speedScale
-                            let barVisualOffset = max(4, referenceMetrics.lineSpacing * 0.28)
+                            // Engraving spacing: keep barlines away from noteheads.
+                            let barVisualOffset = max(10, referenceMetrics.lineSpacing * 0.9)
                             let x = StaffMetrics.roundToPixel(rawX - barVisualOffset, scale: referenceMetrics.pixelScale)
 
                             if x >= leftLimit && x <= rightLimit {
@@ -130,7 +131,7 @@ struct ScrollingStaffView: View {
                 .zIndex(1)
 
                 if showNotes {
-                    ForEach(events) { event in
+                    ForEach(events, id: \.id) { (event: SongNoteEvent) in
                         let timeOffset = event.time - currentTime
                         // Right -> left:
                         // future note (timeOffset > 0) sits to the right, then moves left as time advances.
@@ -152,8 +153,6 @@ struct ScrollingStaffView: View {
                                 rhythm: displayRhythm,
                                 judgement: event.judgement,
                                 yOffset: noteSlot.yOffset,
-                                showSharp: event.showSharp,
-                                showFlat: event.showFlat,
                                 showNoteName: showNoteName,
                                 namingMode: namingMode
                             )
@@ -170,9 +169,7 @@ struct ScrollingStaffView: View {
                                     scale: noteScale,
                                     yOffset: pairedSlot.yOffset,
                                     showNoteName: showNoteName,
-                                    namingMode: namingMode,
-                                    showSharp: false,
-                                    showFlat: false
+                                    namingMode: namingMode
                                 )
                                 .zIndex(2)
                             }
@@ -240,8 +237,6 @@ struct MovingNoteView: View {
     let rhythm: NoteRhythm
     let judgement: Judgement?
     let yOffset: CGFloat
-    let showSharp: Bool
-    let showFlat: Bool
     let showNoteName: Bool
     let namingMode: NoteNamingMode
 
@@ -256,9 +251,7 @@ struct MovingNoteView: View {
             judgement: judgement,
             yOffset: yOffset,
             showNoteName: showNoteName,
-            namingMode: namingMode,
-            showSharp: showSharp,
-            showFlat: showFlat
+            namingMode: namingMode
         )
     }
 }

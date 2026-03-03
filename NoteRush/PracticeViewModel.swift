@@ -46,6 +46,16 @@ struct TimeSignature: Identifiable, Equatable {
     static let common = TimeSignature(numerator: 4, denominator: 4)
 }
 
+enum BlackKeyAccidentalMode: String, CaseIterable, Identifiable {
+    case none
+    case sharp
+    case flat
+
+    var id: String { rawValue }
+
+    var includesBlackKeys: Bool { self != .none }
+}
+
 enum NoteRhythm: String, CaseIterable, Identifiable {
     case whole
     case half
@@ -441,6 +451,9 @@ struct StaffNote: Equatable, Identifiable {
 }
 
 extension StaffNote {
+    var isSharp: Bool { false }
+    var isFlat: Bool { false }
+
     static func preferred(
         letter: NoteLetter,
         range: ClosedRange<Int> = 2...8,

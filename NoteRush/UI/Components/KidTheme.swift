@@ -20,6 +20,9 @@ enum KidTheme {
     static let success = Color(red: 0.20, green: 0.80, blue: 0.55)
     static let danger = Color(red: 0.98, green: 0.32, blue: 0.36)
 
+    // Compatibility alias
+    static let userInput = primary
+
     // Surfaces
     static let surface = Color.white.opacity(0.92)
     static let surfaceStrong = Color.white
@@ -29,6 +32,12 @@ enum KidTheme {
     // Text
     static let textPrimary = Color(red: 0.11, green: 0.16, blue: 0.22)
     static let textSecondary = Color.black.opacity(0.55)
+
+    // Compatibility aliases used across older views
+    static let textOnCardPrimary = textPrimary
+    static let textOnCardSecondary = textSecondary
+    static let textOnBackgroundPrimary = textPrimary
+    static let textOnBackgroundSecondary = textSecondary
 
     // MARK: - Layout
 

@@ -165,7 +165,10 @@ struct SongModeView: View {
                                 showJudgementNoteName: showJudgementNoteName,
                                 useColoredNotes: useColoredNotes,
                                 displayRhythmMode: displayRhythmMode,
-                                namingMode: namingMode
+                                namingMode: namingMode,
+                                noteRhythm: viewModel.noteRhythm,
+                                bpm: viewModel.bpm,
+                                beatsPerBar: viewModel.beatsPerBar
                             )
 
                             // After a wrong answer, show the correct note name briefly.
