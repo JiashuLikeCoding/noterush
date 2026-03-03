@@ -111,6 +111,7 @@ struct StaffView: View {
     let rhythm: NoteRhythm
     let clefMode: StaffClefMode
     let noteColor: Color
+    let noteXRatio: CGFloat
 
     // Intro state is controlled by the parent view. This avoids SwiftUI creating the view early
     // (off-screen) and running the intro timeline before the user actually sees it.
@@ -126,6 +127,7 @@ struct StaffView: View {
         rhythm: NoteRhythm = .quarter,
         clefMode: StaffClefMode = .treble,
         noteColor: Color = .black,
+        noteXRatio: CGFloat = 0.5,
         clefCollapsed: Bool = false,
         showNotes: Bool = true,
         introProgress: CGFloat = 1
@@ -137,6 +139,7 @@ struct StaffView: View {
         self.rhythm = rhythm
         self.clefMode = clefMode
         self.noteColor = noteColor
+        self.noteXRatio = noteXRatio
         self.clefCollapsed = clefCollapsed
         self.showNotes = showNotes
         self.introProgress = introProgress
@@ -149,7 +152,7 @@ struct StaffView: View {
 
             // Intro: note should appear from the far left, then slide to the judgement line position.
             let startX = noteSlot.metrics.leftMargin
-            let targetX = noteSlot.metrics.noteX
+            let targetX = noteSlot.metrics.noteX(at: noteXRatio)
             let introX = startX + (targetX - startX) * introProgress
 
             ZStack {
@@ -282,7 +285,13 @@ struct StaffMetrics {
     }
 
     var noteX: CGFloat {
-        return StaffMetrics.roundToPixel(size.width * 0.5, scale: pixelScale)
+        noteX(at: 0.5)
+    }
+
+    func noteX(at ratio: CGFloat) -> CGFloat {
+        let clamped = min(max(ratio, 0), 1)
+        let rawX = leftMargin + (rightMargin - leftMargin) * clamped
+        return StaffMetrics.roundToPixel(rawX, scale: pixelScale)
     }
 
     /// Returns which ledger *line* indices should be drawn for a note at `noteIndex`.
@@ -355,8 +364,9 @@ enum Judgement {
 
 struct ScrollConfig {
     /// Where the dashed judgement line is placed horizontally (0 = left, 1 = right).
-    /// Jason request: keep it centered.
-    var judgementXRatio: Double = 0.50
+    /// Current product direction pins it to the far left in ScrollingStaffView.
+    var judgementXRatio: Double = 0.0
+    /// Time for notes to travel from the right side to the judgement line.
     var leadTime: Double = 2.0
 }
 
@@ -365,14 +375,36 @@ struct SongNoteEvent: Identifiable {
     let time: TimeInterval
     var note: StaffNote
     let isTarget: Bool
+    /// Visual duration for standard notation rendering.
+    let rhythm: NoteRhythm
     var judgement: Judgement?
 
-    init(id: UUID = UUID(), time: TimeInterval, note: StaffNote, isTarget: Bool = true, judgement: Judgement? = nil) {
+    init(
+        id: UUID = UUID(),
+        time: TimeInterval,
+        note: StaffNote,
+        isTarget: Bool = true,
+        rhythm: NoteRhythm = .quarter,
+        judgement: Judgement? = nil
+    ) {
         self.id = id
         self.time = time
         self.note = note
         self.isTarget = isTarget
+        self.rhythm = rhythm
         self.judgement = judgement
+    }
+
+    var targetPitchClass: Int {
+        ((note.midiNoteNumber % 12) + 12) % 12
+    }
+
+    var showSharp: Bool {
+        note.isSharp
+    }
+
+    var showFlat: Bool {
+        note.isFlat
     }
 }
 
@@ -447,14 +479,22 @@ struct Song: Identifiable {
     let title: String
     var bpm: Double
     var timeSignature: TimeSignature
+    /// Default rhythm for legacy modes (single value). Mixed-rhythm songs use `melody`.
     var rhythm: NoteRhythm
     var duration: TimeInterval
     var clefMode: StaffClefMode
+
+    /// Target notes (pitch) for training.
     var notes: [StaffNote]
+
+    /// Optional per-note duration (beats). When present, this song is "standard notation" mixed-rhythm.
+    /// Invariants: melody.count == notes.count.
+    var melody: [MelodyNote]? = nil
 
     // Generation context (used for adaptive/endless modes like LEVEL training)
     var spawnLetters: Set<NoteLetter> = []
     var generationPool: [StaffNote] = []
+    var allowBlackKeyTargets: Bool = false
 
     var rhythmLabel: String { rhythm.displayName }
 
@@ -521,6 +561,7 @@ struct Song: Identifiable {
             duration: duration,
             clefMode: clefMode,
             notes: notes,
+            melody: melody,
             spawnLetters: targetLetters,
             generationPool: pool
         )
@@ -535,7 +576,8 @@ struct Song: Identifiable {
         targetLetters: Set<NoteLetter>,
         allowedIndices: ClosedRange<Int>? = nil,
         clefMode: StaffClefMode,
-        allowedNotes: [StaffNote]? = nil
+        allowedNotes: [StaffNote]? = nil,
+        allowBlackKeyTargets: Bool = false
     ) -> Song {
         let pool: [StaffNote] = allowedNotes ?? ((clefMode == .bass) ? StaffNote.all(for: StaffClef.bass) : StaffNote.all(for: StaffClef.treble))
         let indexedPool = allowedIndices.map { r in pool.filter { r.contains($0.index) } } ?? pool
@@ -552,7 +594,8 @@ struct Song: Identifiable {
             clefMode: clefMode,
             notes: notes,
             spawnLetters: spawnLetters,
-            generationPool: pool
+            generationPool: pool,
+            allowBlackKeyTargets: allowBlackKeyTargets
         )
     }
 }
@@ -662,10 +705,15 @@ final class SongViewModel: ObservableObject {
     @Published private(set) var lastJudgement: Judgement?
     @Published private(set) var lastJudgementTime: TimeInterval = 0
     @Published private(set) var lastJudgementLetter: NoteLetter?
+    @Published private(set) var lastJudgementNote: StaffNote?
 
     @Published private(set) var events: [SongNoteEvent] = []
 
     private let recordMode: TrainingModeRecord
+    // Judgement windows were re-tuned for right-to-left scrolling with the line at far left.
+    private let judgementEarlyWindow: TimeInterval
+    private let judgementLateWindow: TimeInterval
+    private let reportOutOfWindowMiss: Bool
 
     // LEVEL mode: per-staff-note goal (octave-specific)
     // Product direction: each note appears a fixed number of times; progress increases even on wrong.
@@ -686,23 +734,31 @@ final class SongViewModel: ObservableObject {
     private var levelInitialNoteCount: Int = 0
     private var levelUsesFixedSequence: Bool = false
 
-    var scrollConfig: ScrollConfig { ScrollConfig() }
+    var scrollConfig: ScrollConfig {
+        var config = ScrollConfig()
+
+        // Standard notation spacing model:
+        // 1 beat = 1 grid cell, so whole=4 cells, half=2, quarter=1.
+        // Product requirement (sight-reading): user should see at least ~3-4 bars at once.
+        // Keep ~5 bars visible (more in landscape), and never too sparse.
+        let visibleBeats = max(12.0, song.timeSignature.beatsPerBar * 5.0)
+        let secondsPerBeat = 60.0 / max(10.0, bpm)
+        config.leadTime = secondsPerBeat * visibleBeats
+        return config
+    }
     /// Scrolling speed multiplier.
-    /// Requirement: changing BPM should both speed up the scroll AND make notes closer together.
-    /// If we scaled linearly with BPM, spacing would cancel out (faster but same distance).
-    /// Use a sub-linear curve so higher BPM still yields denser note spacing.
+    /// Spacing is fully driven by beat-grid lead time above.
+    /// Keep this neutral to avoid distorting rhythmic spacing.
     var scrollSpeedMultiplier: Double {
-        let base: Double = 80
-        let ratio = max(0.5, min(3.0, bpm / base))
-        return pow(ratio, 0.7)
+        1.0
     }
     var noteScale: Double { 1.0 }
 
-    /// Start the song with a short "pre-roll" so the first note begins at the left edge
+    /// Start the song with a short "pre-roll" so the first note begins at the right edge
     /// (instead of already sitting on the judgement line).
     private func resetClockForScrollStart() {
-        // In ScrollingStaffView: x = judgementX - (event.time - currentTime) * (leftSpan/leadTime) * scrollSpeedMultiplier
-        // We want the first event (time=0) to start at leftMargin, so set currentTime = -lead/scrollSpeedMultiplier.
+        // In ScrollingStaffView: x = judgementX + (event.time - currentTime) * (rightSpan/leadTime) * scrollSpeedMultiplier
+        // We want the first event (time=0) to start at the right side, so set currentTime = -lead/scrollSpeedMultiplier.
         let lead = scrollConfig.leadTime
         let mult = max(0.05, scrollSpeedMultiplier)
         currentTime = -lead / mult
@@ -716,10 +772,19 @@ final class SongViewModel: ObservableObject {
     // Use a real clock for timing; Timer cadence is not exact and causes visible/input misalignment.
     private var lastTickTimestamp: CFTimeInterval?
 
-    init(song: Song, recordMode: TrainingModeRecord = .songs) {
+    init(
+        song: Song,
+        recordMode: TrainingModeRecord = .songs,
+        judgementEarlyWindow: TimeInterval = 0.50,
+        judgementLateWindow: TimeInterval = 0.84,
+        reportOutOfWindowMiss: Bool = false
+    ) {
         self.song = song
         self.recordMode = recordMode
         self.bpm = song.bpm
+        self.judgementEarlyWindow = judgementEarlyWindow
+        self.judgementLateWindow = judgementLateWindow
+        self.reportOutOfWindowMiss = reportOutOfWindowMiss
 
         if recordMode == .levels {
             resetLevelState()
@@ -740,6 +805,14 @@ final class SongViewModel: ObservableObject {
         guard !judged.isEmpty else { return 0 }
         let correct = judged.filter { $0 == .perfect }.count
         return Double(correct) / Double(judged.count)
+    }
+
+    var beatsPerBar: Double {
+        song.timeSignature.beatsPerBar
+    }
+
+    var noteRhythm: NoteRhythm {
+        song.rhythm
     }
 
     var currentTargetNote: StaffNote? {
@@ -788,6 +861,7 @@ final class SongViewModel: ObservableObject {
         resetClockForScrollStart()
         currentIndex = 0
         lastJudgement = nil
+        lastJudgementNote = nil
         rebuildEvents()
         soundAnchorNote = currentTargetNote
         start()
@@ -804,14 +878,26 @@ final class SongViewModel: ObservableObject {
     }
 
     func select(letter: NoteLetter) {
+        if song.allowBlackKeyTargets {
+            select(pitchClass: letter.semitoneOffset)
+            return
+        }
+        handleSelection(selectedLetter: letter, selectedPitchClass: nil)
+    }
+
+    func select(pitchClass: Int) {
+        handleSelection(selectedLetter: nil, selectedPitchClass: pitchClass)
+    }
+
+    private func handleSelection(selectedLetter: NoteLetter?, selectedPitchClass: Int?) {
         guard !isPaused, !isFinished else { return }
         guard currentIndex < events.count else { return }
 
         // Judge against the note that is currently at the dashed line.
         // event.time == currentTime when the note is exactly on the line.
         // UX: do NOT judge before the note reaches the line.
-        let earlyWindow: TimeInterval = 0.50   // increased window (requested)
-        let lateWindow: TimeInterval = 1.68    // increased window (requested)
+        let earlyWindow: TimeInterval = judgementEarlyWindow
+        let lateWindow: TimeInterval = judgementLateWindow
         let anchorDelay = lateWindow
 
         // Prefer the earliest unjudged note.
@@ -819,15 +905,31 @@ final class SongViewModel: ObservableObject {
         let targetEvent = events[idx]
         let dt = targetEvent.time - currentTime
 
-        // If the user taps too early/late, ignore (so we don't judge the wrong note).
+        // If the user taps too early/late, either ignore or show an immediate miss feedback.
         // dt > 0 means the note has NOT reached the line yet.
-        guard dt <= earlyWindow && dt >= -lateWindow else { return }
+        guard dt <= earlyWindow && dt >= -lateWindow else {
+            guard reportOutOfWindowMiss else { return }
+            lastJudgement = .miss
+            lastJudgementLetter = targetEvent.note.letter
+            lastJudgementNote = targetEvent.note
+            lastJudgementTime = currentTime
+            return
+        }
 
-        let correct = (letter == targetEvent.note.letter)
+        let correct: Bool
+        if song.allowBlackKeyTargets {
+            guard let selectedPitchClass else { return }
+            let normalized = ((selectedPitchClass % 12) + 12) % 12
+            correct = normalized == targetEvent.targetPitchClass
+        } else {
+            guard let selectedLetter else { return }
+            correct = (selectedLetter == targetEvent.note.letter)
+        }
         let judgement: Judgement = correct ? .perfect : .miss
 
         lastJudgement = judgement
         lastJudgementLetter = targetEvent.note.letter
+        lastJudgementNote = targetEvent.note
         lastJudgementTime = currentTime
 
         events[idx].judgement = judgement
@@ -879,7 +981,7 @@ final class SongViewModel: ObservableObject {
         }
 
         // Auto-miss notes that have passed the dashed line without being judged.
-        let missWindow: TimeInterval = 0.84
+        let missWindow: TimeInterval = judgementLateWindow
         while currentIndex < events.count {
             let e = events[currentIndex]
             if e.judgement != nil {
@@ -899,6 +1001,7 @@ final class SongViewModel: ObservableObject {
 
                 lastJudgement = .miss
                 lastJudgementLetter = e.note.letter
+                lastJudgementNote = e.note
                 lastJudgementTime = currentTime
                 currentIndex += 1
 
@@ -926,9 +1029,29 @@ final class SongViewModel: ObservableObject {
 
     private func rebuildEvents() {
         let secondsPerBeat = 60.0 / max(10, bpm)
-        let noteInterval = secondsPerBeat * song.rhythm.noteIntervalBeats
-        events = song.notes.enumerated().map { idx, note in
-            SongNoteEvent(time: TimeInterval(idx) * noteInterval, note: note, isTarget: true)
+
+        if let melody = song.melody, melody.count == song.notes.count {
+            let startBeats = standardStartBeats(melody: melody, beatsPerBar: song.timeSignature.beatsPerBar)
+            events = song.notes.enumerated().map { idx, note in
+                let beats = melody[idx].beats
+                let startTime = TimeInterval(startBeats[idx] * secondsPerBeat)
+                return SongNoteEvent(
+                    time: startTime,
+                    note: note,
+                    isTarget: true,
+                    rhythm: NoteRhythm.from(noteIntervalBeats: beats)
+                )
+            }
+        } else {
+            let startBeats = rhythmicStartBeats(
+                noteCount: song.notes.count,
+                rhythm: song.rhythm,
+                beatsPerBar: song.timeSignature.beatsPerBar
+            )
+            events = song.notes.enumerated().map { idx, note in
+                let startTime = TimeInterval(startBeats[idx] * secondsPerBeat)
+                return SongNoteEvent(time: startTime, note: note, isTarget: true, rhythm: song.rhythm)
+            }
         }
 
         if recordMode == .levels {
@@ -937,6 +1060,113 @@ final class SongViewModel: ObservableObject {
                 refreshUpcomingEventsReplacingCompleted()
             }
         }
+    }
+
+    private func standardStartBeats(melody: [MelodyNote], beatsPerBar: Double) -> [Double] {
+        // Standard engraving placement rules for 4/4-like training:
+        // - whole (4 beats) starts at beat 0 only
+        // - half (2 beats) starts at beat 0 or beat 2
+        // - quarter (1 beat) starts at beat 0/1/2/3
+        // - notes never cross a barline; if it doesn't fit, move to next bar
+        // - if we're between allowed starts, we leave rests (skip forward)
+        let barBeats = max(1.0, beatsPerBar)
+
+        func allowedStarts(for dur: Double) -> [Double] {
+            if abs(dur - barBeats) < 0.001 { return [0] }
+            if abs(dur - (barBeats / 2.0)) < 0.001 { return [0, barBeats / 2.0] }
+            if abs(dur - (barBeats / 4.0)) < 0.001 {
+                return [0, barBeats / 4.0, barBeats / 2.0, (barBeats * 3.0) / 4.0]
+            }
+            return [0]
+        }
+
+        var out: [Double] = []
+        out.reserveCapacity(melody.count)
+
+        var barIndex = 0
+        var beatInBar: Double = 0
+
+        func nextBar() {
+            barIndex += 1
+            beatInBar = 0
+        }
+
+        for m in melody {
+            let dur = max(0.25, m.beats)
+            let starts = allowedStarts(for: dur)
+
+            // Snap forward to an allowed start, or move to next bar.
+            if let s = starts.first(where: { $0 + 0.0001 >= beatInBar }) {
+                beatInBar = s
+            } else {
+                nextBar()
+            }
+
+            // Ensure it fits.
+            if beatInBar + dur > barBeats + 0.0001 {
+                nextBar()
+            }
+
+            out.append(Double(barIndex) * barBeats + beatInBar)
+
+            beatInBar += dur
+            if beatInBar >= barBeats - 0.0001 {
+                nextBar()
+            }
+        }
+
+        return out
+    }
+
+    private func rhythmicStartBeats(
+        noteCount: Int,
+        rhythm: NoteRhythm,
+        beatsPerBar: Double
+    ) -> [Double] {
+        let durationBeats = max(0.25, rhythm.noteIntervalBeats)
+        let safeBeatsPerBar = max(1.0, beatsPerBar)
+        let segmentsPerBar = 4
+        let segmentBeats = safeBeatsPerBar / Double(segmentsPerBar)
+
+        // Product direction:
+        // - each bar is split into 4 equal parts
+        // - notes can only start at boundaries between these parts
+        // - note value still cannot cross barline
+        let durationSegments = max(1, Int(ceil(durationBeats / max(0.001, segmentBeats))))
+
+        var allowedStartsInBar: [Double] = []
+        var segmentIndex = 0
+        while segmentIndex < segmentsPerBar {
+            if segmentIndex + durationSegments <= segmentsPerBar {
+                let beat = Double(segmentIndex) * segmentBeats
+                allowedStartsInBar.append(beat)
+            }
+            // Step by note duration so positions follow note type:
+            // whole -> 1, half -> 1/3, quarter -> 1/2/3/4 boundaries.
+            segmentIndex += durationSegments
+        }
+
+        if allowedStartsInBar.isEmpty {
+            allowedStartsInBar = [0]
+        }
+
+        var out: [Double] = []
+        out.reserveCapacity(noteCount)
+
+        var barIndex = 0
+        var indexInBar = 0
+        for _ in 0..<noteCount {
+            let localStart = allowedStartsInBar[indexInBar]
+            out.append(Double(barIndex) * safeBeatsPerBar + localStart)
+
+            indexInBar += 1
+            if indexInBar >= allowedStartsInBar.count {
+                indexInBar = 0
+                barIndex += 1
+            }
+        }
+
+        return out
     }
 
     private func resetLevelState() {
@@ -961,17 +1191,109 @@ final class SongViewModel: ObservableObject {
             levelWrongCounts[n.id] = 0
         }
 
-        // Build a fixed sequence where each note appears exactly N times.
-        // Shuffle so the practice feels varied.
-        var fixedNotes: [StaffNote] = []
-        fixedNotes.reserveCapacity(levelInitialNoteCount * requiredCorrectPerNote)
-        for n in levelActivePool {
-            for _ in 0..<requiredCorrectPerNote {
-                fixedNotes.append(n)
+        // Build a fixed sequence where each note appears exactly N times,
+        // BUT avoid consecutive repeats (user requirement).
+        song.notes = buildNoConsecutiveRepeatSequence(
+            uniqueNotes: levelActivePool,
+            repeatsPerNote: requiredCorrectPerNote
+        )
+    }
+
+    private func buildNoConsecutiveRepeatSequence(
+        uniqueNotes: [StaffNote],
+        repeatsPerNote: Int
+    ) -> [StaffNote] {
+        guard repeatsPerNote > 0 else { return [] }
+
+        let total = uniqueNotes.count * repeatsPerNote
+        if uniqueNotes.count <= 1 {
+            // Only one note choice; consecutive repeats are unavoidable.
+            return Array(repeating: uniqueNotes.first!, count: total)
+        }
+
+        // Greedy scheduler: always pick a note != last with the highest remaining count.
+        // Retry a few times with different tie-breaks if we ever get stuck.
+        for _ in 0..<12 {
+            var remaining: [String: Int] = [:]
+            var byId: [String: StaffNote] = [:]
+            for n in uniqueNotes {
+                remaining[n.id] = repeatsPerNote
+                byId[n.id] = n
+            }
+
+            var result: [StaffNote] = []
+            result.reserveCapacity(total)
+            var lastId: String? = nil
+
+            for _ in 0..<total {
+                // Build candidate list excluding last.
+                let candidates = remaining
+                    .filter { $0.value > 0 && $0.key != lastId }
+                    .sorted { a, b in
+                        if a.value != b.value { return a.value > b.value }
+                        // Random-ish tie-break: hash order varies each retry via shuffle below.
+                        return a.key < b.key
+                    }
+
+                guard let pickId = candidates.first?.key, let pick = byId[pickId] else {
+                    // Stuck; retry the whole construction.
+                    result.removeAll(keepingCapacity: true)
+                    break
+                }
+
+                result.append(pick)
+                remaining[pickId, default: 0] -= 1
+                lastId = pickId
+            }
+
+            if result.count == total {
+                // Light shuffle that preserves the no-consecutive constraint:
+                // try swapping random pairs when it doesn't introduce repeats.
+                var shuffled = result
+                if shuffled.count >= 4 {
+                    for _ in 0..<min(64, shuffled.count * 2) {
+                        let i = Int.random(in: 0..<shuffled.count)
+                        let j = Int.random(in: 0..<shuffled.count)
+                        guard i != j else { continue }
+                        shuffled.swapAt(i, j)
+
+                        // Validate local neighborhoods only.
+                        func ok(_ idx: Int) -> Bool {
+                            guard idx >= 0 && idx < shuffled.count else { return true }
+                            let cur = shuffled[idx].id
+                            if idx > 0, shuffled[idx - 1].id == cur { return false }
+                            if idx + 1 < shuffled.count, shuffled[idx + 1].id == cur { return false }
+                            return true
+                        }
+                        if ok(i) && ok(j) {
+                            // keep swap
+                        } else {
+                            shuffled.swapAt(i, j) // revert
+                        }
+                    }
+                }
+                // Final sanity check.
+                var hasRepeat = false
+                for k in 1..<shuffled.count {
+                    if shuffled[k].id == shuffled[k - 1].id {
+                        hasRepeat = true
+                        break
+                    }
+                }
+                if !hasRepeat {
+                    return shuffled
+                }
             }
         }
-        fixedNotes.shuffle()
-        song.notes = fixedNotes
+
+        // Fallback: plain shuffle (should be rare).
+        var fallback: [StaffNote] = []
+        fallback.reserveCapacity(total)
+        for n in uniqueNotes {
+            for _ in 0..<repeatsPerNote { fallback.append(n) }
+        }
+        fallback.shuffle()
+        return fallback
     }
 
     // MARK: - LEVEL adaptive goal logic
@@ -1211,6 +1533,11 @@ private struct PianoTouchKey: View {
 struct PianoKeyboardInputView: View {
     let namingMode: NoteNamingMode
     let useColoredKeys: Bool
+    let blackKeyMode: BlackKeyAccidentalMode
+    let highlightedLetter: NoteLetter?
+    let highlightedColor: Color?
+    let allowBlackKeyInput: Bool
+    let onSelectPitchClass: ((Int) -> Void)?
     let onSelect: (NoteLetter) -> Void
 
     @State private var pressedId: String? = nil
@@ -1228,13 +1555,43 @@ struct PianoKeyboardInputView: View {
 
     // C#, D#, F#, G#, A#
     private var blackKeys: [BlackKey] {
-        [
+        if blackKeyMode == .flat {
+            return [
+                BlackKey(afterWhiteIndex: 0, labelLetters: "D♭", labelSolfege: "Re♭", midi: 61, mapsTo: .d),
+                BlackKey(afterWhiteIndex: 1, labelLetters: "E♭", labelSolfege: "Mi♭", midi: 63, mapsTo: .e),
+                BlackKey(afterWhiteIndex: 3, labelLetters: "G♭", labelSolfege: "Sol♭", midi: 66, mapsTo: .g),
+                BlackKey(afterWhiteIndex: 4, labelLetters: "A♭", labelSolfege: "La♭", midi: 68, mapsTo: .a),
+                BlackKey(afterWhiteIndex: 5, labelLetters: "B♭", labelSolfege: "Si♭", midi: 70, mapsTo: .b),
+            ]
+        }
+
+        return [
             BlackKey(afterWhiteIndex: 0, labelLetters: "C#", labelSolfege: "Do#", midi: 61, mapsTo: .c),
             BlackKey(afterWhiteIndex: 1, labelLetters: "D#", labelSolfege: "Re#", midi: 63, mapsTo: .d),
             BlackKey(afterWhiteIndex: 3, labelLetters: "F#", labelSolfege: "Fa#", midi: 66, mapsTo: .f),
             BlackKey(afterWhiteIndex: 4, labelLetters: "G#", labelSolfege: "Sol#", midi: 68, mapsTo: .g),
             BlackKey(afterWhiteIndex: 5, labelLetters: "A#", labelSolfege: "La#", midi: 70, mapsTo: .a),
         ]
+    }
+
+    init(
+        namingMode: NoteNamingMode,
+        useColoredKeys: Bool,
+        blackKeyMode: BlackKeyAccidentalMode = .none,
+        highlightedLetter: NoteLetter? = nil,
+        highlightedColor: Color? = nil,
+        allowBlackKeyInput: Bool = false,
+        onSelectPitchClass: ((Int) -> Void)? = nil,
+        onSelect: @escaping (NoteLetter) -> Void
+    ) {
+        self.namingMode = namingMode
+        self.useColoredKeys = useColoredKeys
+        self.blackKeyMode = blackKeyMode
+        self.highlightedLetter = highlightedLetter
+        self.highlightedColor = highlightedColor
+        self.allowBlackKeyInput = allowBlackKeyInput
+        self.onSelectPitchClass = onSelectPitchClass
+        self.onSelect = onSelect
     }
 
     var body: some View {
@@ -1259,44 +1616,48 @@ struct PianoKeyboardInputView: View {
                 // Keys
                 ZStack(alignment: .topLeading) {
                     HStack(spacing: gap) {
-                    ForEach(whiteLetters.indices, id: \ .self) { i in
-                        let letter = whiteLetters[i]
-                        PianoTouchKey(
-                            id: "w_\(letter.rawValue)",
-                            isBlack: false,
-                            width: whiteW,
-                            height: contentH,
-                            content: AnyView(
-                                ZStack {
-                                    // White key surface
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(useColoredKeys ? CuteTheme.noteColor(for: letter) : Color.white)
+                        ForEach(whiteLetters.indices, id: \.self) { i in
+                            let letter = whiteLetters[i]
+                            let isHighlighted = (highlightedLetter == letter)
+                            let baseColor = useColoredKeys ? CuteTheme.noteColor(for: letter) : Color.white
+                            let activeColor = highlightedColor ?? CuteTheme.noteColor(for: letter)
+                            PianoTouchKey(
+                                id: "w_\(letter.rawValue)",
+                                isBlack: false,
+                                width: whiteW,
+                                height: contentH,
+                                content: AnyView(
+                                    ZStack {
+                                        // Fill the full key when highlighted so guide target is obvious.
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(isHighlighted ? activeColor : baseColor)
 
-                                    // (no solid separators; use gaps + border)
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(Color.black.opacity(0.12), lineWidth: 1)
 
-                                    // Key border so white keys remain visually distinct
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.black.opacity(0.12), lineWidth: 1)
-
-                                    Text(letter.displayName(for: namingMode))
-                                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                        .foregroundColor(CuteTheme.textPrimary)
-                                        .padding(.bottom, 32)
-                                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                                        .background(
-                                            Color.white.opacity(0.0001)
-                                        )
+                                        Text(letter.displayName(for: namingMode))
+                                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                            .foregroundColor(isHighlighted ? Color.white : CuteTheme.textPrimary)
+                                            .padding(.bottom, 32)
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                                            .background(
+                                                Color.white.opacity(0.0001)
+                                            )
+                                    }
+                                ),
+                                pressedId: $pressedId,
+                                onTrigger: {
+                                    if allowBlackKeyInput, let onSelectPitchClass {
+                                        onSelectPitchClass(letter.semitoneOffset)
+                                    } else {
+                                        onSelect(letter)
+                                    }
                                 }
-                            ),
-                            pressedId: $pressedId,
-                            onTrigger: {
-                                onSelect(letter)
-                            }
-                        )
+                            )
+                        }
                     }
-                }
 
-                ForEach(blackKeys.indices, id: \ .self) { idx in
+                ForEach(blackKeys.indices, id: \.self) { idx in
                     let bk = blackKeys[idx]
                     let boundaryX = (CGFloat(bk.afterWhiteIndex) + 1) * (whiteW + gap) - gap / 2
                     let x = boundaryX - blackW / 2
@@ -1320,7 +1681,11 @@ struct PianoKeyboardInputView: View {
                         ),
                         pressedId: $pressedId,
                         onTrigger: {
-                            onSelect(bk.mapsTo)
+                            if allowBlackKeyInput, let onSelectPitchClass {
+                                onSelectPitchClass(((bk.midi % 12) + 12) % 12)
+                            } else {
+                                onSelect(bk.mapsTo)
+                            }
                         }
                     )
                     // Use offset (top-left anchored) to avoid position hit-test quirks.
@@ -1331,7 +1696,6 @@ struct PianoKeyboardInputView: View {
                 }
             }
         }
-        .frame(minHeight: 180)
         .frame(maxWidth: .infinity)
     }
 }
