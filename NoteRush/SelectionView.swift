@@ -371,27 +371,28 @@ private struct NamingModeQuickToggle: View {
                     VStack(spacing: 8) {
                         Text(mode.segmentTitle)
                             .font(.system(size: 15, weight: .heavy, design: .rounded))
-                            .foregroundColor(.white)
+                            .foregroundColor(CuteTheme.textPrimary)
 
                         Rectangle()
-                            .fill(namingMode == mode ? Color.white.opacity(0.95) : Color.white.opacity(0.0))
+                            .fill(namingMode == mode ? CuteTheme.accent.opacity(0.95) : Color.clear)
                             .frame(height: 3)
                             .cornerRadius(2)
                             .padding(.horizontal, 6)
                     }
                     .padding(.vertical, 6)
                     .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 10)
-        .background(Color.white.opacity(0.12))
+        .background(CuteTheme.controlFill.opacity(0.85))
         .cornerRadius(18)
         .overlay(
             RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                .stroke(CuteTheme.controlBorder, lineWidth: 1)
         )
     }
 }
