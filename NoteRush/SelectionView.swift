@@ -256,17 +256,27 @@ private struct SelectionLobby: View {
             // Big glass card
             ZStack {
                 RoundedRectangle(cornerRadius: 34)
-                    .fill(CuteTheme.cardBackground.opacity(0.92))
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.82),
+                                KidTheme.primary.opacity(0.14),
+                                KidTheme.accent.opacity(0.10)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                     .overlay(
                         RoundedRectangle(cornerRadius: 34)
-                            .stroke(CuteTheme.cardBorder, lineWidth: 1)
+                            .stroke(Color.white.opacity(0.65), lineWidth: 1)
                     )
-                    .shadow(color: CuteTheme.cardShadow, radius: 24, x: 0, y: 16)
+                    .shadow(color: Color.black.opacity(0.12), radius: 24, x: 0, y: 16)
 
                 VStack(spacing: 16) {
                     Image(systemName: "music.note")
                         .font(.system(size: 34, weight: .black))
-                        .foregroundColor(Color.white.opacity(0.95))
+                        .foregroundColor(KidTheme.primary)
                         .padding(.top, 6)
 
                     // Global naming mode (CDE vs Do Re Mi). Applies to all 4 modes before starting.
