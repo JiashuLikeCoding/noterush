@@ -5,9 +5,9 @@ import SwiftUI
 enum KidTheme {
     // MARK: - Colors
 
-    // Background gradient
-    static let bgTop = Color(red: 0.92, green: 0.97, blue: 1.00)
-    static let bgBottom = Color(red: 0.98, green: 0.96, blue: 1.00)
+    // Background gradient (Candy / vivid but still soft enough for long use)
+    static let bgTop = Color(red: 0.60, green: 0.88, blue: 1.00)      // bright sky
+    static let bgBottom = Color(red: 1.00, green: 0.80, blue: 0.95)   // candy pink
 
     // Primary / accent
     static let primary = Color(red: 0.22, green: 0.62, blue: 0.98) // sky blue
@@ -70,19 +70,19 @@ extension View {
 
                 // Soft blobs
                 Circle()
-                    .fill(KidTheme.primary.opacity(0.10))
+                    .fill(KidTheme.primary.opacity(0.18))
                     .frame(width: 280, height: 280)
                     .blur(radius: 18)
                     .offset(x: -160, y: -240)
 
                 Circle()
-                    .fill(KidTheme.accent.opacity(0.10))
+                    .fill(KidTheme.accent.opacity(0.18))
                     .frame(width: 240, height: 240)
                     .blur(radius: 18)
                     .offset(x: 170, y: -70)
 
                 Circle()
-                    .fill(KidTheme.primary.opacity(0.08))
+                    .fill(KidTheme.primary.opacity(0.14))
                     .frame(width: 320, height: 320)
                     .blur(radius: 24)
                     .offset(x: 120, y: 260)
