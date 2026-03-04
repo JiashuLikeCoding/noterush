@@ -96,19 +96,19 @@ extension View {
                 .ignoresSafeArea()
 
                 Circle()
-                    .fill(CuteTheme.accent.opacity(0.08))
+                    .fill(CuteTheme.accent.opacity(0.12))
                     .frame(width: 260, height: 260)
                     .blur(radius: 12)
                     .offset(x: -140, y: -220)
 
                 Circle()
-                    .fill(CuteTheme.lowAccent.opacity(0.08))
+                    .fill(CuteTheme.lowAccent.opacity(0.12))
                     .frame(width: 220, height: 220)
                     .blur(radius: 10)
                     .offset(x: 150, y: -60)
 
                 Circle()
-                    .fill(CuteTheme.highAccent.opacity(0.07))
+                    .fill(CuteTheme.highAccent.opacity(0.11))
                     .frame(width: 260, height: 260)
                     .blur(radius: 14)
                     .offset(x: 120, y: 220)

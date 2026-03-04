@@ -227,30 +227,31 @@ private struct SelectionLobby: View {
                 HStack(spacing: 10) {
                     Text("♪")
                         .font(.system(size: 18, weight: .heavy))
-                        .foregroundColor(Color.white.opacity(0.9))
+                        .foregroundColor(CuteTheme.accent.opacity(0.95))
                     Text("音乐小天才")
                         .font(.system(size: 34, weight: .heavy, design: .rounded))
-                        .foregroundColor(Color.white)
+                        .foregroundColor(CuteTheme.textPrimary)
                     Text("♪")
                         .font(.system(size: 18, weight: .heavy))
-                        .foregroundColor(Color.white.opacity(0.9))
+                        .foregroundColor(CuteTheme.accent.opacity(0.95))
                 }
+                .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 6)
 
                 Text("让我们一起学习五线谱和音符吧！")
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundColor(Color.white.opacity(0.85))
+                    .foregroundColor(CuteTheme.textSecondary)
             }
             .padding(.top, 18)
 
             // Big glass card
             ZStack {
                 RoundedRectangle(cornerRadius: 34)
-                    .fill(Color.white.opacity(0.18))
+                    .fill(CuteTheme.cardBackground.opacity(0.92))
                     .overlay(
                         RoundedRectangle(cornerRadius: 34)
-                            .stroke(Color.white.opacity(0.22), lineWidth: 1)
+                            .stroke(CuteTheme.cardBorder, lineWidth: 1)
                     )
-                    .shadow(color: Color.black.opacity(0.14), radius: 24, x: 0, y: 16)
+                    .shadow(color: CuteTheme.cardShadow, radius: 24, x: 0, y: 16)
 
                 VStack(spacing: 16) {
                     Image(systemName: "music.note")
