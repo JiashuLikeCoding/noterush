@@ -242,6 +242,16 @@ private struct SelectionLobby: View {
                     .foregroundColor(CuteTheme.textSecondary)
             }
             .padding(.top, 18)
+            .padding(.horizontal, 16)
+            .background(
+                // Add a subtle darkening behind the hero text so it never washes out on bright wallpapers.
+                LinearGradient(
+                    colors: [Color.black.opacity(0.10), Color.black.opacity(0.00)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .cornerRadius(18)
+            )
 
             // Big glass card
             ZStack {

@@ -34,10 +34,11 @@ enum AppTheme: String, CaseIterable, Identifiable {
     var palette: ThemePalette {
         switch self {
         case .zen: // 森林（无印：偏灰的苔绿/鼠尾草绿）
+            // Darken slightly to avoid the UI looking "washed out" on bright displays.
             return ThemePalette(
-                backgroundTop: Color(red: 0.96, green: 0.97, blue: 0.95),
-                backgroundBottom: Color(red: 0.92, green: 0.94, blue: 0.91),
-                cardBackground: Color(red: 0.99, green: 0.99, blue: 0.98),
+                backgroundTop: Color(red: 0.93, green: 0.95, blue: 0.92),
+                backgroundBottom: Color(red: 0.88, green: 0.91, blue: 0.86),
+                cardBackground: Color(red: 0.98, green: 0.98, blue: 0.97),
                 cardBorder: Color.black.opacity(0.06),
                 cardShadow: Color.black.opacity(0.06),
                 textPrimary: Color(red: 0.18, green: 0.19, blue: 0.17),
