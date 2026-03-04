@@ -5,13 +5,32 @@ import SwiftUI
 enum KidTheme {
     // MARK: - Colors
 
-    // Background gradient (Candy / vivid but still soft enough for long use)
-    static let bgTop = Color(red: 0.60, green: 0.88, blue: 1.00)      // bright sky
-    static let bgBottom = Color(red: 1.00, green: 0.80, blue: 0.95)   // candy pink
+    // Background gradient (Candy Rainbow but readable)
+    static let bgTop = Color(red: 0.64, green: 0.90, blue: 1.00)      // sky
+    static let bgBottom = Color(red: 0.98, green: 0.86, blue: 0.98)   // soft candy
 
     // Primary / accent
     static let primary = Color(red: 0.22, green: 0.62, blue: 0.98) // sky blue
     static let primaryPressed = Color(red: 0.15, green: 0.52, blue: 0.92)
+
+    // Candy rainbow (consistent saturation/contrast)
+    static let candyRed1 = Color(red: 1.00, green: 0.22, blue: 0.42)
+    static let candyRed2 = Color(red: 1.00, green: 0.43, blue: 0.55)
+
+    static let candyOrange1 = Color(red: 1.00, green: 0.62, blue: 0.16)
+    static let candyOrange2 = Color(red: 1.00, green: 0.48, blue: 0.07)
+
+    static let candyYellow1 = Color(red: 1.00, green: 0.86, blue: 0.22)
+    static let candyYellow2 = Color(red: 1.00, green: 0.73, blue: 0.10)
+
+    static let candyGreen1 = Color(red: 0.14, green: 0.86, blue: 0.55)
+    static let candyGreen2 = Color(red: 0.12, green: 0.78, blue: 0.95) // mint→sky
+
+    static let candyBlue1 = Color(red: 0.22, green: 0.55, blue: 1.00)
+    static let candyBlue2 = Color(red: 0.00, green: 0.72, blue: 1.00)
+
+    static let candyPurple1 = Color(red: 0.53, green: 0.26, blue: 0.98)
+    static let candyPurple2 = Color(red: 0.36, green: 0.49, blue: 1.00)
 
     // Compatibility alias
     static let userInput = primary

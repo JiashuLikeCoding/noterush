@@ -256,22 +256,12 @@ private struct SelectionLobby: View {
             // Big glass card
             ZStack {
                 RoundedRectangle(cornerRadius: 34)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.82),
-                                KidTheme.primary.opacity(0.14),
-                                KidTheme.accent.opacity(0.10)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(KidTheme.surface)
                     .overlay(
                         RoundedRectangle(cornerRadius: 34)
-                            .stroke(Color.white.opacity(0.65), lineWidth: 1)
+                            .stroke(Color.white.opacity(0.55), lineWidth: 1)
                     )
-                    .shadow(color: Color.black.opacity(0.12), radius: 24, x: 0, y: 16)
+                    .shadow(color: Color.black.opacity(0.10), radius: 22, x: 0, y: 14)
 
                 VStack(spacing: 16) {
                     Image(systemName: "music.note")
@@ -290,19 +280,20 @@ private struct SelectionLobby: View {
                         let buttonHeight = max(52, (available - spacing * (count - 1)) / count)
 
                         VStack(spacing: spacing) {
-                            HomePillButton(title: "闯关", subtitle: "挑战关卡，拿星星", colors: [KidTheme.success, KidTheme.success.opacity(0.7)], systemImage: "flag.checkered", action: onPickLevel)
+                            // Candy rainbow, but unified palette (B2)
+                            HomePillButton(title: "闯关", subtitle: "挑战关卡，拿星星", colors: [KidTheme.candyOrange1, KidTheme.candyOrange2], systemImage: "flag.checkered", action: onPickLevel)
                                 .frame(height: buttonHeight)
 
-                            HomePillButton(title: "听音训练", subtitle: "听声音猜音符", colors: [KidTheme.primary, KidTheme.primary.opacity(0.7)], systemImage: "ear", action: onPickListen)
+                            HomePillButton(title: "听音训练", subtitle: "听声音猜音符", colors: [KidTheme.candyBlue1, KidTheme.candyBlue2], systemImage: "ear", action: onPickListen)
                                 .frame(height: buttonHeight)
 
-                            HomePillButton(title: "歌曲", subtitle: "练熟悉的旋律", colors: [KidTheme.accent, KidTheme.accent.opacity(0.7)], systemImage: "music.note.list", action: onPickSong)
+                            HomePillButton(title: "歌曲", subtitle: "练熟悉的旋律", colors: [KidTheme.candyRed1, KidTheme.candyRed2], systemImage: "music.note.list", action: onPickSong)
                                 .frame(height: buttonHeight)
 
-                            HomePillButton(title: "自由练习", subtitle: "认识五线谱上的音符", colors: [Color(red: 1.00, green: 0.62, blue: 0.80), Color(red: 0.55, green: 0.84, blue: 1.00)], systemImage: "eyes", action: onPickPractice)
+                            HomePillButton(title: "自由练习", subtitle: "认识五线谱上的音符", colors: [KidTheme.candyPurple1, KidTheme.candyPurple2], systemImage: "eyes", action: onPickPractice)
                                 .frame(height: buttonHeight)
 
-                            HomePillButton(title: "记录", subtitle: "查看练习统计", colors: [Color(red: 0.55, green: 0.76, blue: 1.00), Color(red: 0.35, green: 0.60, blue: 1.00)], systemImage: "chart.bar.xaxis", action: onPickRecords)
+                            HomePillButton(title: "记录", subtitle: "查看练习统计", colors: [KidTheme.candyGreen1, KidTheme.candyGreen2], systemImage: "chart.bar.xaxis", action: onPickRecords)
                                 .frame(height: buttonHeight)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
